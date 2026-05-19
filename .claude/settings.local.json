@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Select-Object Name)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"require\\('./src/shared/constants'\\); require\\('./src/shared/ids'\\); require\\('./src/shared/file-url'\\); require\\('./src/shared/validators'\\); console.log\\('All shared modules load OK'\\);\")",
+      "Bash(node --check main.js)",
+      "Bash(git add *)"
+    ]
+  }
+}
