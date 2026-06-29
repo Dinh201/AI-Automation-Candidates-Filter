@@ -1,0 +1,8 @@
+-- ==========================================
+-- ĐÃ ĐƯỢC GỘP VÀO schema.sql
+-- ==========================================
+-- File migration.sql này không còn cần thiết.
+-- Tất cả migration (benefits, status constraint, interviews, hr_calendar_tokens)
+-- đã được tích hợp trực tiếp vào supabase/schema.sql
+--
+-- Để tạo database mới: chạy toàn bộ supabase/schema.sql trong Supabase SQL Editor.
