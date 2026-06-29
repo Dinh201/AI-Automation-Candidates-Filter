@@ -18,7 +18,10 @@ import {
 import { CandidateScoringResult } from "@/services/ai/schema";
 import { ScheduleInterviewModal } from "@/components/schedule-interview-modal";
 import { AskAIPanel } from "@/components/ask-ai-panel";
+<<<<<<< HEAD
 import { CandidateActionButtons } from "@/components/candidate-action-buttons";
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 
 type Job = {
   id: string;
@@ -55,12 +58,19 @@ async function getCandidate(id: string): Promise<Candidate | null> {
 async function isCalendarConnected(): Promise<boolean> {
   const { data } = await supabaseAdmin
     .from("hr_calendar_tokens")
+<<<<<<< HEAD
     .select("id, expiry, refresh_token")
     .eq("id", "default")
     .single();
   if (!data) return false;
   // Connected if token is still valid OR can be refreshed
   return data.expiry > Date.now() || !!data.refresh_token;
+=======
+    .select("id")
+    .eq("id", "default")
+    .single();
+  return !!data;
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 }
 
 function ScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
@@ -180,12 +190,15 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
             >
               <FileText className="w-3.5 h-3.5" /> Xem CV
             </a>
+<<<<<<< HEAD
             {ai && (
               <CandidateActionButtons
                 candidateId={id}
                 currentStatus={candidate.status}
               />
             )}
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
           </div>
         </div>
 
@@ -306,6 +319,7 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Lên lịch phỏng vấn</p>
+<<<<<<< HEAD
                   {calendarConnected ? (
                     <p className="text-xs text-zinc-500">Google Calendar đã kết nối — lịch sẽ được tạo tự động</p>
                   ) : (
@@ -319,6 +333,13 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
                       </a>
                     </p>
                   )}
+=======
+                  <p className="text-xs text-zinc-500">
+                    {calendarConnected
+                      ? "Google Calendar đã kết nối — lịch sẽ được tạo tự động"
+                      : "Google Calendar chưa kết nối — lịch sẽ không sync"}
+                  </p>
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
                 </div>
               </div>
               <ScheduleInterviewModal
@@ -327,7 +348,10 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
                 jobTitle={candidate.jobs?.title ?? null}
                 jobId={candidate.jobs?.id ?? null}
                 calendarConnected={calendarConnected}
+<<<<<<< HEAD
                 returnPath={`/candidates/${id}`}
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
               />
             </div>
           </div>

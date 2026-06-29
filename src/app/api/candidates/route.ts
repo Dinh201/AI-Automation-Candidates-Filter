@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+<<<<<<< HEAD
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { logAudit } from "@/services/audit-service";
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 
 export async function GET() {
   const { data, error } = await supabase
@@ -16,6 +19,7 @@ export async function GET() {
 
   return NextResponse.json({ data });
 }
+<<<<<<< HEAD
 
 export async function DELETE(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -53,3 +57,5 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({ success: true, deleted: validIds.length });
 }
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88

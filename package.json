@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+<<<<<<< HEAD
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch"
+=======
+    "lint": "eslint"
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -19,13 +23,19 @@
     "@tiptap/pm": "^3.23.5",
     "@tiptap/react": "^3.23.5",
     "@tiptap/starter-kit": "^3.23.5",
+<<<<<<< HEAD
     "@types/nodemailer": "^8.0.1",
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
+<<<<<<< HEAD
     "node-cron": "^4.5.0",
     "nodemailer": "^9.0.0",
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     "openai": "^6.37.0",
     "pdf-parse": "^1.1.1",
     "react": "19.2.4",
@@ -40,14 +50,21 @@
     "@tailwindcss/postcss": "^4",
     "@types/jest": "^30.0.0",
     "@types/node": "^20",
+<<<<<<< HEAD
     "@types/node-cron": "^3.0.11",
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+<<<<<<< HEAD
     "jest": "^30.4.2",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.11",
+=======
+    "tailwindcss": "^4",
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     "typescript": "^5"
   }
 }

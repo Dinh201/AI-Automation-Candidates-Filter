@@ -7,9 +7,13 @@ import {
   Users,
   Briefcase,
   Calendar,
+<<<<<<< HEAD
   CalendarDays,
   Zap,
   ScanSearch,
+=======
+  Zap,
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 } from "lucide-react";
 
 const navItems = [
@@ -17,8 +21,11 @@ const navItems = [
   { href: "/candidates", label: "Ứng viên", icon: Users, exact: false },
   { href: "/jobs", label: "Vị trí tuyển dụng", icon: Briefcase, exact: false },
   { href: "/interviews", label: "Phỏng vấn", icon: Calendar, exact: false },
+<<<<<<< HEAD
   { href: "/calendar", label: "Xem lịch", icon: CalendarDays, exact: false },
   { href: "/cv-analyzer", label: "Phân tích CV", icon: ScanSearch, exact: false },
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 ];
 
 export function Sidebar() {

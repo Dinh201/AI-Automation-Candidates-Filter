@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+<<<<<<< HEAD
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import Link from "next/link";
 import { Users, Briefcase, CheckCircle, TrendingUp, ArrowRight, Clock, Activity } from "lucide-react";
@@ -14,6 +15,12 @@ type AuditLog = {
   created_at: string;
 };
 
+=======
+import Link from "next/link";
+import { Users, Briefcase, CheckCircle, TrendingUp, ArrowRight, Clock } from "lucide-react";
+import { CandidateScoringResult } from "@/services/ai/schema";
+
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 type CandidateRow = {
   id: string;
   name: string;
@@ -32,7 +39,10 @@ async function getDashboardData() {
     { count: scoredCount },
     { data: recentCandidates },
     { data: scoredForDecision },
+<<<<<<< HEAD
     { data: auditLogs },
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   ] = await Promise.all([
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "Open"),
     supabase.from("candidates").select("*", { count: "exact", head: true }),
@@ -46,11 +56,14 @@ async function getDashboardData() {
       .from("candidates")
       .select("ai_score_result")
       .eq("status", "Scored"),
+<<<<<<< HEAD
     supabaseAdmin
       .from("audit_logs")
       .select("id, entity_type, entity_id, entity_name, action, details, created_at")
       .order("created_at", { ascending: false })
       .limit(15),
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   ]);
 
   const strongHireCount =
@@ -64,7 +77,10 @@ async function getDashboardData() {
     scoredCount: scoredCount ?? 0,
     strongHireCount,
     recentCandidates: (recentCandidates ?? []) as unknown as CandidateRow[],
+<<<<<<< HEAD
     auditLogs: (auditLogs ?? []) as AuditLog[],
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   };
 }
 
@@ -102,6 +118,7 @@ function statusConfig(status: string) {
   }
 }
 
+<<<<<<< HEAD
 function auditActionLabel(action: string, details: Record<string, unknown>): string {
   switch (action) {
     case "candidate_applied":   return `Nộp CV cho vị trí ${details.job_title ?? ""}`;
@@ -126,6 +143,10 @@ function auditDot(action: string): string {
 
 export default async function DashboardPage() {
   const { openJobsCount, totalCandidates, scoredCount, strongHireCount, recentCandidates, auditLogs } =
+=======
+export default async function DashboardPage() {
+  const { openJobsCount, totalCandidates, scoredCount, strongHireCount, recentCandidates } =
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     await getDashboardData();
 
   const stats = [
@@ -268,6 +289,7 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+<<<<<<< HEAD
       {/* Audit Log — Hoạt động gần đây */}
       <div className="glass-card overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-white/[0.06]">
@@ -303,6 +325,8 @@ export default async function DashboardPage() {
           </ul>
         )}
       </div>
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     </div>
   );
 }

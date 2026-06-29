@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+<<<<<<< HEAD
 import { logAudit } from "@/services/audit-service";
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 
 export async function GET(
   _request: Request,
@@ -50,6 +53,7 @@ export async function PATCH(
     return NextResponse.json({ error: "DATABASE_ERROR", code: "DATABASE_ERROR" }, { status: 500 });
   }
 
+<<<<<<< HEAD
   if (updates.status) {
     logAudit({
       entity_type: "candidate",
@@ -98,3 +102,7 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
+=======
+  return NextResponse.json({ data });
+}
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88

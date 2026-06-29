@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import {
   createCalendarEvent,
+<<<<<<< HEAD
   checkFreeBusy,
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   refreshAccessToken,
   GoogleTokens,
 } from "@/services/google-calendar-service";
 import { sendInterviewInvitation } from "@/services/email-service";
+<<<<<<< HEAD
 import { logAudit } from "@/services/audit-service";
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 
 async function getCalendarTokens(): Promise<GoogleTokens | null> {
   const { data } = await supabaseAdmin
@@ -29,8 +35,12 @@ async function getValidTokens(): Promise<GoogleTokens | null> {
   const tokens = await getCalendarTokens();
   if (!tokens) return null;
 
+<<<<<<< HEAD
   const needsRefresh = !tokens.expiry || tokens.expiry - Date.now() < 60_000;
   if (needsRefresh && tokens.refresh_token) {
+=======
+  if (tokens.expiry - Date.now() < 60_000 && tokens.refresh_token) {
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     try {
       const refreshed = await refreshAccessToken(tokens.refresh_token);
       await supabaseAdmin.from("hr_calendar_tokens").update({
@@ -39,9 +49,14 @@ async function getValidTokens(): Promise<GoogleTokens | null> {
         updated_at: new Date().toISOString(),
       }).eq("id", "default");
       return refreshed;
+<<<<<<< HEAD
     } catch (err) {
       console.warn("[calendar] Refresh token thất bại, thử dùng access_token hiện tại:", err);
       // Fall through — try the current access_token; Calendar API will return 401 if truly expired
+=======
+    } catch {
+      return null;
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     }
   }
 
@@ -77,6 +92,7 @@ export async function POST(request: Request) {
   const startDate = new Date(start_time);
   const endDate = new Date(startDate.getTime() + duration_minutes * 60_000);
 
+<<<<<<< HEAD
   // DB-level overlap check — runs regardless of Calendar connection
   const { data: overlapping } = await supabaseAdmin
     .from("interviews")
@@ -102,6 +118,8 @@ export async function POST(request: Request) {
     );
   }
 
+=======
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   const { data: candidate } = await supabaseAdmin
     .from("candidates")
     .select("name, email, jobs(title)")
@@ -117,6 +135,7 @@ export async function POST(request: Request) {
   let googleEventId: string | null = null;
   let meetLink: string | null = null;
   let calendarConnected = false;
+<<<<<<< HEAD
   let calendarError: string | null = null;
 
   const tokens = await getValidTokens();
@@ -148,6 +167,12 @@ export async function POST(request: Request) {
 
     try {
       console.log("[calendar] Tạo sự kiện — token expiry:", new Date(tokens.expiry).toISOString(), "| có refresh_token:", !!tokens.refresh_token);
+=======
+
+  const tokens = await getValidTokens();
+  if (tokens) {
+    try {
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       const event = await createCalendarEvent(tokens, {
         summary: `Interview - ${candidate.name} - ${jobTitle}`,
@@ -169,6 +194,7 @@ export async function POST(request: Request) {
       googleEventId = event.eventId;
       meetLink = event.meetLink ?? null;
       calendarConnected = true;
+<<<<<<< HEAD
       console.log("[calendar] Sự kiện tạo thành công — eventId:", googleEventId, "| meetLink:", meetLink);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -181,6 +207,10 @@ export async function POST(request: Request) {
       } else {
         calendarError = "Không thể tạo sự kiện Google Calendar. Lịch phỏng vấn vẫn được lưu trong hệ thống.";
       }
+=======
+    } catch (err) {
+      console.error("Google Calendar error (non-fatal):", err);
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     }
   }
 
@@ -211,6 +241,7 @@ export async function POST(request: Request) {
     .update({ status: "Interviewing" })
     .eq("id", candidate_id);
 
+<<<<<<< HEAD
   logAudit({
     entity_type: "interview",
     entity_id: interview.id,
@@ -223,6 +254,10 @@ export async function POST(request: Request) {
       has_calendar_event: !!googleEventId,
     },
   });
+=======
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const interviewBriefUrl = `${appUrl}/interview-brief/${interview.id}`;
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 
   let emailSent = false;
   try {
@@ -235,6 +270,10 @@ export async function POST(request: Request) {
       startTime: startDate,
       endTime: endDate,
       meetLink: meetLink ?? undefined,
+<<<<<<< HEAD
+=======
+      interviewBriefUrl,
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
       notes,
     });
     emailSent = true;
@@ -246,8 +285,14 @@ export async function POST(request: Request) {
     success: true,
     interview,
     calendar_connected: calendarConnected,
+<<<<<<< HEAD
     calendar_error: calendarError,
     meet_link: meetLink,
     email_sent: emailSent,
+=======
+    meet_link: meetLink,
+    email_sent: emailSent,
+    interview_brief_url: interviewBriefUrl,
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   });
 }

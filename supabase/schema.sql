@@ -140,6 +140,7 @@ CREATE POLICY "hr_calendar_tokens_all" ON public.hr_calendar_tokens
 
 
 -- ==========================================
+<<<<<<< HEAD
 -- 5. BẢNG HR_GMAIL_TOKENS (Gmail OAuth tokens)
 -- Kết nối qua giao diện trang Ứng viên → /api/gmail/connect
 -- ==========================================
@@ -160,6 +161,9 @@ CREATE POLICY "hr_gmail_tokens_all" ON public.hr_gmail_tokens
 
 -- ==========================================
 -- 6. STORAGE BUCKET: cv_uploads
+=======
+-- 5. STORAGE BUCKET: cv_uploads
+>>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 -- (Chạy riêng nếu bucket chưa tồn tại)
 -- ==========================================
 -- INSERT INTO storage.buckets (id, name, public, file_size_limit)
