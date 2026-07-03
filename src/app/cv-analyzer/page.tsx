@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   UploadCloud, FileText, CheckCircle2, AlertCircle,
-  Loader2, ChevronDown, TrendingUp, Shield, Star,
+  ChevronDown, TrendingUp, Shield, Star,
   AlertTriangle, MessageSquare, BookOpen, RotateCcw, ExternalLink,
+  Briefcase, ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +36,7 @@ const RING_COLORS = {
   culture:   "#06b6d4",
 };
 
-const C = 2 * Math.PI * 40; // circumference
+const C = 2 * Math.PI * 40;
 
 function ScoreRing({ score, label, color }: { score: number; label: string; color: string }) {
   const [animated, setAnimated] = useState(false);
@@ -111,18 +113,22 @@ function BulletList({ items, dotColor }: { items: string[]; dotColor: string }) 
 
 /* ────────────────────────────────────────────────── */
 
-export default function CvAnalyzerPage() {
-  const [phase, setPhase]             = useState<Phase>("upload");
-  const [jobs, setJobs]               = useState<Job[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState("");
-  const [file, setFile]               = useState<File | null>(null);
-  const [candidateName, setCandidateName] = useState("");
+function CvAnalyzerContent() {
+  const searchParams = useSearchParams();
+  const presetJobId = searchParams.get("job_id") || "";
+
+  const [phase, setPhase]                   = useState<Phase>("upload");
+  const [jobs, setJobs]                     = useState<Job[]>([]);
+  const [selectedJobId, setSelectedJobId]   = useState(presetJobId);
+  const [file, setFile]                     = useState<File | null>(null);
+  const [candidateName, setCandidateName]   = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
-  const [isDragging, setIsDragging]   = useState(false);
-  const [error, setError]             = useState("");
-  const [result, setResult]           = useState<CandidateScoringResult | null>(null);
-  const [jobTitle, setJobTitle]       = useState("");
-  const [candidateId, setCandidateId] = useState("");
+  const [showOptional, setShowOptional]     = useState(false);
+  const [isDragging, setIsDragging]         = useState(false);
+  const [error, setError]                   = useState("");
+  const [result, setResult]                 = useState<CandidateScoringResult | null>(null);
+  const [jobTitle, setJobTitle]             = useState("");
+  const [candidateId, setCandidateId]       = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -130,10 +136,14 @@ export default function CvAnalyzerPage() {
       .then((r) => r.json())
       .then(({ jobs: data }) => {
         setJobs(data || []);
-        if (data?.length) setSelectedJobId(data[0].id);
+        if (!presetJobId && data?.length) setSelectedJobId(data[0].id);
       })
       .catch(() => {});
-  }, []);
+  }, [presetJobId]);
+
+  const selectedJob = jobs.find((j) => j.id === selectedJobId);
+  // Show compact badge instead of dropdown when job is pre-determined
+  const isJobLocked = !!presetJobId || jobs.length === 1;
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -178,51 +188,66 @@ export default function CvAnalyzerPage() {
   /* ── Upload ── */
   if (phase === "upload") {
     return (
-      <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
+      <div className="max-w-2xl mx-auto py-10 px-4 space-y-5">
         <div>
           <h1 className="text-2xl font-bold text-white">Phân tích CV nhanh</h1>
-          <p className="text-sm text-zinc-400 mt-1">Upload CV (PDF) để AI chấm điểm ngay lập tức · Kết quả được lưu vào hệ thống</p>
+          <p className="text-sm text-zinc-400 mt-1">Upload CV (PDF) để AI chấm điểm · Kết quả được lưu vào hệ thống</p>
         </div>
 
         {/* Job selector */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-zinc-300">Vị trí ứng tuyển *</Label>
-            <Link href="/jobs" className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
-              + Tạo vị trí mới
-            </Link>
+        {jobs.length === 0 ? (
+          <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <p className="text-sm text-amber-300">
+              Chưa có vị trí tuyển dụng nào.{" "}
+              <Link href="/jobs" className="underline hover:text-amber-200">Tạo vị trí mới</Link> trước.
+            </p>
           </div>
-          <select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50">
-            {jobs.length === 0 && <option value="">Chưa có vị trí nào — tạo mới ở trang Jobs</option>}
-            {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
-          </select>
-        </div>
-
-        {/* Candidate info */}
-        <div className="grid grid-cols-2 gap-3">
+        ) : isJobLocked ? (
+          /* Compact badge — single job or URL-preset */
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+            <Briefcase className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span className="text-sm text-indigo-300 font-medium flex-1">
+              {selectedJob?.title ?? "Đang tải..."}
+            </span>
+            {jobs.length > 1 && (
+              <button
+                onClick={() => { setSelectedJobId(""); }}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Đổi
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Full dropdown — multiple jobs, no URL preset */
           <div className="space-y-2">
-            <Label className="text-zinc-300">Tên ứng viên</Label>
-            <Input value={candidateName} onChange={(e) => setCandidateName(e.target.value)}
-              placeholder="Nguyễn Văn A"
-              className="bg-zinc-900 border-zinc-700 text-white focus-visible:ring-indigo-500/50" />
+            <div className="flex items-center justify-between">
+              <Label className="text-zinc-300">Vị trí ứng tuyển <span className="text-red-400">*</span></Label>
+              <Link href="/jobs" className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                + Tạo vị trí mới
+              </Link>
+            </div>
+            <select
+              value={selectedJobId}
+              onChange={(e) => setSelectedJobId(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50"
+            >
+              {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+            </select>
           </div>
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Email ứng viên</Label>
-            <Input type="email" value={candidateEmail} onChange={(e) => setCandidateEmail(e.target.value)}
-              placeholder="email@example.com"
-              className="bg-zinc-900 border-zinc-700 text-white focus-visible:ring-indigo-500/50" />
-          </div>
-        </div>
+        )}
 
         {/* Drop zone */}
-        <div className={`rounded-xl border-2 border-dashed px-8 py-14 text-center transition-all cursor-pointer
+        <div
+          className={`rounded-xl border-2 border-dashed px-8 py-14 text-center transition-all cursor-pointer
             ${isDragging ? "border-indigo-500 bg-indigo-500/10 scale-[1.01]" : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/20"}
             ${file ? "border-emerald-500/60 bg-emerald-500/5" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}>
+          onClick={() => fileInputRef.current?.click()}
+        >
           {file ? (
             <div className="space-y-2">
               <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -244,8 +269,50 @@ export default function CvAnalyzerPage() {
               </div>
             </div>
           )}
-          <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden"
-            onChange={(e) => { if (e.target.files?.[0]) { setFile(e.target.files[0]); setError(""); } }} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => { if (e.target.files?.[0]) { setFile(e.target.files[0]); setError(""); } }}
+          />
+        </div>
+
+        {/* Optional candidate info — collapsible */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowOptional(!showOptional)}
+            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-400 transition-colors"
+          >
+            {showOptional ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            Thêm tên / email ứng viên{" "}
+            <span className="text-zinc-600">(tuỳ chọn — AI tự trích xuất từ CV)</span>
+          </button>
+
+          {showOptional && (
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="space-y-1.5">
+                <Label className="text-zinc-400 text-xs">Tên ứng viên</Label>
+                <Input
+                  value={candidateName}
+                  onChange={(e) => setCandidateName(e.target.value)}
+                  placeholder="Nguyễn Văn A"
+                  className="bg-zinc-900 border-zinc-700 text-white text-sm focus-visible:ring-indigo-500/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-zinc-400 text-xs">Email</Label>
+                <Input
+                  type="email"
+                  value={candidateEmail}
+                  onChange={(e) => setCandidateEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="bg-zinc-900 border-zinc-700 text-white text-sm focus-visible:ring-indigo-500/50"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -255,8 +322,11 @@ export default function CvAnalyzerPage() {
           </div>
         )}
 
-        <Button onClick={handleAnalyze} disabled={!file || !selectedJobId}
-          className="w-full py-5 text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40">
+        <Button
+          onClick={handleAnalyze}
+          disabled={!file || !selectedJobId || jobs.length === 0}
+          className="w-full py-5 text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40"
+        >
           Phân tích với AI →
         </Button>
       </div>
@@ -428,5 +498,20 @@ export default function CvAnalyzerPage() {
 
       <div className="h-6" />
     </div>
+  );
+}
+
+export default function CvAnalyzerPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-2xl mx-auto py-10 px-4 space-y-5">
+        <div className="h-8 w-48 bg-zinc-800 rounded animate-pulse" />
+        <div className="h-4 w-72 bg-zinc-800/60 rounded animate-pulse" />
+        <div className="h-10 bg-zinc-800/40 rounded-lg animate-pulse" />
+        <div className="h-52 bg-zinc-800/40 rounded-xl animate-pulse" />
+      </div>
+    }>
+      <CvAnalyzerContent />
+    </Suspense>
   );
 }
