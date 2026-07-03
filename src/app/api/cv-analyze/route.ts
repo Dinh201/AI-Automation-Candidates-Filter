@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const jobId = formData.get("job_id") as string;
-    const name = (formData.get("name") as string) || "Ứng viên không rõ tên";
+    const providedName = ((formData.get("name") as string) || "").trim();
     const email = (formData.get("email") as string) || "unknown@quickscan.local";
     const file = formData.get("cv") as File;
 
@@ -71,10 +71,11 @@ export async function POST(request: Request) {
       cvUrl = signedUrlData?.signedUrl ?? fileName;
     }
 
-    // Tạo candidate record
+    // Tạo candidate record với tên tạm thời (sẽ cập nhật sau khi AI trích xuất)
+    const tempName = providedName || "Ứng viên không rõ tên";
     const { data: candidate, error: candidateError } = await supabaseAdmin
       .from("candidates")
-      .insert([{ job_id: jobId, name, email, cv_url: cvUrl, status: "Scoring" }])
+      .insert([{ job_id: jobId, name: tempName, email, cv_url: cvUrl, status: "Scoring" }])
       .select()
       .single();
 
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
     logAudit({
       entity_type: "candidate",
       entity_id: candidate.id,
-      entity_name: name,
+      entity_name: tempName,
       action: "candidate_applied",
       details: { job_id: jobId, job_title: job.title, email },
     });
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     // Chạy AI scoring
     const cvText = await extractTextFromPDF(Buffer.from(new Uint8Array(fileBuffer)));
 
-    const result = await scoreCandidate({
+    let result = await scoreCandidate({
       jobDescription: job.description,
       requiredSkills: job.required_skills,
       preferredSkills: job.preferred_skills || "",
@@ -107,21 +108,32 @@ export async function POST(request: Request) {
       cvText,
     });
 
-    // Lưu kết quả AI vào DB
+    // Tính total_score server-side để tránh AI trả về 0
+    const totalScore = parseFloat(
+      (result.job_fit_score * 0.5 + result.potential_score * 0.3 + result.cultural_fit_score * 0.2).toFixed(2)
+    );
+    result = { ...result, total_score: totalScore };
+
+    // Xác định tên cuối cùng: ưu tiên user nhập > AI trích xuất > mặc định
+    const aiName = result.candidate_name?.trim() || "";
+    const finalName = providedName || aiName || "Ứng viên không rõ tên";
+
+    // Lưu kết quả AI vào DB, cập nhật tên nếu AI trích xuất được
     await supabaseAdmin
       .from("candidates")
       .update({
         ai_score_result: result,
-        total_score: result.total_score,
+        total_score: totalScore,
         missing_information: result.missing_information.length > 0,
         status: "Scored",
+        ...(finalName !== tempName ? { name: finalName } : {}),
       })
       .eq("id", candidate.id);
 
     logAudit({
       entity_type: "candidate",
       entity_id: candidate.id,
-      entity_name: name,
+      entity_name: finalName,
       action: "candidate_scored",
       details: {
         job_title: job.title,
@@ -134,6 +146,7 @@ export async function POST(request: Request) {
       result,
       jobTitle: job.title,
       candidateId: candidate.id,
+      candidateName: finalName,
     });
   } catch (error: unknown) {
     console.error("Lỗi cv-analyze:", error);

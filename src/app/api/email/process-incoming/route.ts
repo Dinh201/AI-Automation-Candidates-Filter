@@ -16,10 +16,27 @@ export const maxDuration = 120;
 
 const BUCKET = "cv_uploads";
 
+// ─── CẤU HÌNH TỪ KHÓA QUÉT EMAIL ────────────────────────────────────────────
+//
+// SCAN_SUBJECT_KEYWORDS: Từ khóa xuất hiện trong tiêu đề email thì MỚI lấy về.
+// Email KHÔNG chứa bất kỳ từ khóa nào dưới đây sẽ bị BỎ QUA hoàn toàn.
+// (Gmail API pre-filter — chạy trước khi download email về)
+//
+// Thêm/xóa từ khóa theo nhu cầu. Không phân biệt hoa/thường.
+const SCAN_SUBJECT_KEYWORDS: string[] = [
+  // Từ khóa generic cho CV / đơn ứng tuyển
+  "cv", "resume", "ứng tuyển", "xin việc", "apply", "application",
+  // Tên vị trí cụ thể
+  "frontend", "fe developer",
+  "backend", "be developer",
+  "fullstack", "full-stack", "full stack",
+  // Thêm từ khóa tại đây:
+];
+
 // ─── Alias thủ công ───────────────────────────────────────────────────────────
-// Thêm từ khóa ở đây để hệ thống nhận ra email dù ứng viên không ghi đúng tên vị trí.
-// keyword: từ xuất hiện trong tiêu đề email (không phân biệt hoa/thường)
-// jobTitle: tên vị trí trong DB cần match vào (phải khớp một phần với cột `title`)
+// Dùng để map từ khóa trong tiêu đề email → tên vị trí trong DB.
+// Chỉ ảnh hưởng đến việc PHÂN LOẠI (gán vào job nào), không ảnh hưởng đến
+// việc CÓ lấy email hay không (xem SCAN_SUBJECT_KEYWORDS ở trên).
 const SUBJECT_ALIASES: { keyword: string; jobTitle: string }[] = [
   { keyword: "frontend", jobTitle: "Frontend Developer" },
   { keyword: "fe developer", jobTitle: "Frontend Developer" },
@@ -80,7 +97,7 @@ export async function GET(request: Request) {
 
   const results: {
     email: string;
-    status: "ok" | "skipped_no_pdf" | "skipped_no_jobs" | "error";
+    status: "ok" | "skipped_no_pdf" | "skipped_no_jobs" | "skipped_no_match" | "error";
     candidateId?: string;
     jobTitle?: string;
     error?: string;
@@ -97,7 +114,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: message, code: "GMAIL_INIT_FAILED" }, { status: 500 });
   }
 
-  const messageIds = await listUnprocessedEmailIds(token);
+  const messageIds = await listUnprocessedEmailIds(token, SCAN_SUBJECT_KEYWORDS);
   if (messageIds.length === 0) {
     return NextResponse.json({ processed: 0, results: [] });
   }
@@ -129,13 +146,18 @@ export async function GET(request: Request) {
       continue;
     }
 
-    // Match job from subject; fallback to first open job
+    // Match job from subject — không fallback, phải khớp keyword mới xử lý
     const jobs = openJobs ?? [];
-    const matchedJob = matchJob(subject, jobs) ?? (jobs.length > 0 ? jobs[0] : null);
-
-    if (!matchedJob) {
+    if (jobs.length === 0) {
       await markEmailAsProcessed(token, messageId, processedLabelId);
       results.push({ email: senderEmail, status: "skipped_no_jobs" });
+      continue;
+    }
+
+    const matchedJob = matchJob(subject, jobs);
+    if (!matchedJob) {
+      await markEmailAsProcessed(token, messageId, processedLabelId);
+      results.push({ email: senderEmail, status: "skipped_no_match" });
       continue;
     }
 
@@ -218,11 +240,17 @@ export async function GET(request: Request) {
           cvText,
         });
 
+        // Tính total_score server-side để tránh AI trả về 0
+        const totalScore = parseFloat(
+          (aiResult.job_fit_score * 0.5 + aiResult.potential_score * 0.3 + aiResult.cultural_fit_score * 0.2).toFixed(2)
+        );
+        aiResult = { ...aiResult, total_score: totalScore };
+
         await supabaseAdmin
           .from("candidates")
           .update({
             ai_score_result: aiResult,
-            total_score: aiResult.total_score,
+            total_score: totalScore,
             missing_information: aiResult.missing_information.length > 0,
             status: "Scored",
           })

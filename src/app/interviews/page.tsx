@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-<<<<<<< HEAD
 import { Calendar, Clock, User, ExternalLink, CheckCircle2, XCircle, AlertCircle, UserCheck, UserX, X } from "lucide-react";
-=======
-import { Calendar, Clock, User, ExternalLink, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
 
 type Interview = {
   id: string;
@@ -22,10 +18,7 @@ type Interview = {
   candidates: {
     name: string;
     email: string;
-<<<<<<< HEAD
     status: string | null;
-=======
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     jobs: { title: string } | null;
   } | null;
 };
@@ -44,7 +37,6 @@ export default function InterviewsPage() {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [calendarStatus, setCalendarStatus] = useState<"connected" | "disconnected" | "unknown">("unknown");
-<<<<<<< HEAD
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [submitting, setSubmitting] = useState<string | null>(null);
 
@@ -67,16 +59,6 @@ export default function InterviewsPage() {
         .then((r) => r.json())
         .then(({ connected }) => setCalendarStatus(connected ? "connected" : "disconnected"))
         .catch(() => setCalendarStatus("disconnected"));
-=======
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("calendar_connected") === "1") {
-      setCalendarStatus("connected");
-      window.history.replaceState({}, "", "/interviews");
-    } else if (params.get("calendar_error")) {
-      setCalendarStatus("disconnected");
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
     }
 
     fetch("/api/interviews")
@@ -85,15 +67,12 @@ export default function InterviewsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-<<<<<<< HEAD
   useEffect(() => {
     if (!showSuccessBanner) return;
     const timer = setTimeout(() => setShowSuccessBanner(false), 3000);
     return () => clearTimeout(timer);
   }, [showSuccessBanner]);
 
-=======
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   const upcoming = interviews.filter(
     (i) => i.status === "Scheduled" && new Date(i.start_time) >= new Date()
   );
@@ -101,7 +80,6 @@ export default function InterviewsPage() {
     (i) => i.status !== "Scheduled" || new Date(i.start_time) < new Date()
   );
 
-<<<<<<< HEAD
   async function recordOutcome(interviewId: string, outcome: "Hired" | "Rejected") {
     setSubmitting(interviewId + outcome);
     try {
@@ -139,8 +117,6 @@ export default function InterviewsPage() {
     }
   }
 
-=======
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   function InterviewCard({ iv }: { iv: Interview }) {
     const statusCfg = statusConfig(iv.status);
     const start = new Date(iv.start_time);
@@ -153,7 +129,6 @@ export default function InterviewsPage() {
             <p className="font-semibold text-white">{iv.candidates?.name ?? "—"}</p>
             <p className="text-xs text-zinc-400">{iv.candidates?.jobs?.title ?? "—"}</p>
           </div>
-<<<<<<< HEAD
           <div className="flex flex-col items-end gap-1.5">
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusCfg.className}`}>
               {statusCfg.icon}
@@ -170,12 +145,6 @@ export default function InterviewsPage() {
               </span>
             )}
           </div>
-=======
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusCfg.className}`}>
-            {statusCfg.icon}
-            {statusCfg.label}
-          </span>
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
         </div>
 
         <div className="space-y-1.5 text-sm text-zinc-400">
@@ -198,27 +167,13 @@ export default function InterviewsPage() {
           <p className="text-xs text-zinc-500 border-t border-zinc-800 pt-3 line-clamp-2">{iv.notes}</p>
         )}
 
-<<<<<<< HEAD
         <div className="flex items-center gap-3 pt-1 flex-wrap">
-=======
-        <div className="flex items-center gap-3 pt-1">
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
           <Link
             href={`/candidates/${iv.candidate_id}`}
             className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
           >
             <ExternalLink className="w-3 h-3" /> Hồ sơ ứng viên
           </Link>
-<<<<<<< HEAD
-=======
-          <Link
-            href={`/interview-brief/${iv.id}`}
-            target="_blank"
-            className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
-          >
-            <ExternalLink className="w-3 h-3" /> Interview Kit
-          </Link>
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
           {iv.meet_link && (
             <a
               href={iv.meet_link}
@@ -230,7 +185,6 @@ export default function InterviewsPage() {
             </a>
           )}
         </div>
-<<<<<<< HEAD
 
         {/* Hủy lịch — chỉ hiện cho interview sắp tới chưa qua */}
         {iv.status === "Scheduled" && new Date(iv.start_time) >= new Date() && (
@@ -270,8 +224,6 @@ export default function InterviewsPage() {
             </div>
           </div>
         )}
-=======
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
       </div>
     );
   }
@@ -279,7 +231,6 @@ export default function InterviewsPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-<<<<<<< HEAD
       <div>
         <h1 className="text-xl font-semibold text-white">Lịch phỏng vấn</h1>
         <p className="text-sm text-zinc-400 mt-0.5">
@@ -318,28 +269,6 @@ export default function InterviewsPage() {
           <button onClick={() => setShowSuccessBanner(false)} className="text-green-500/60 hover:text-green-300 transition-colors">
             <X className="w-4 h-4" />
           </button>
-=======
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Lịch phỏng vấn</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">
-            {loading ? "Đang tải..." : `${interviews.length} buổi phỏng vấn`}
-          </p>
-        </div>
-        <a
-          href="/api/calendar/connect"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-sm font-medium text-zinc-200 transition-colors"
-        >
-          <Calendar className="w-4 h-4 text-indigo-400" />
-          {calendarStatus === "connected" ? "✓ Google Calendar đã kết nối" : "Kết nối Google Calendar"}
-        </a>
-      </div>
-
-      {calendarStatus === "connected" && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-300">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          Google Calendar đã kết nối thành công!
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
         </div>
       )}
 

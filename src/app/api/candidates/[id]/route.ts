@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-<<<<<<< HEAD
 import { logAudit } from "@/services/audit-service";
-=======
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
+import { sendHiredNotification, sendRejectedNotification } from "@/services/email-service";
 
 export async function GET(
   _request: Request,
@@ -46,14 +44,13 @@ export async function PATCH(
     .from("candidates")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .select()
+    .select("*, jobs(title)")
     .single();
 
   if (error) {
     return NextResponse.json({ error: "DATABASE_ERROR", code: "DATABASE_ERROR" }, { status: 500 });
   }
 
-<<<<<<< HEAD
   if (updates.status) {
     logAudit({
       entity_type: "candidate",
@@ -62,6 +59,24 @@ export async function PATCH(
       action: "candidate_status_changed",
       details: { new_status: updates.status },
     });
+
+    if (data.email) {
+      const jobTitle = (data.jobs as { title?: string } | null)?.title ?? "vị trí đã ứng tuyển";
+      if (updates.status === "Rejected") {
+        sendRejectedNotification({
+          candidateName: data.name,
+          candidateEmail: data.email,
+          jobTitle,
+        }).catch((err) => console.error("[candidate] Gửi email từ chối thất bại:", err));
+      } else if (updates.status === "Hired") {
+        sendHiredNotification({
+          candidateName: data.name,
+          candidateEmail: data.email,
+          jobTitle,
+          hrEmail: process.env.HR_EMAIL,
+        }).catch((err) => console.error("[candidate] Gửi email tuyển dụng thất bại:", err));
+      }
+    }
   }
 
   return NextResponse.json({ data });
@@ -102,7 +117,3 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
-=======
-  return NextResponse.json({ data });
-}
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88

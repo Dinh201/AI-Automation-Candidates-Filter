@@ -8,10 +8,14 @@ import {
 } from "@/services/google-calendar-service";
 
 const TZ = "Asia/Ho_Chi_Minh";
-const WORK_START_H = 9;
-const WORK_END_H = 18;
-const LUNCH_START_MIN = 12 * 60;       // 12:00
-const LUNCH_END_MIN = 13 * 60 + 30;    // 13:30
+const MORNING_START_MIN = 10 * 60 + 30; // 10:30
+const MORNING_END_MIN   = 11 * 60 + 30; // 11:30
+const AFTERNOON_START_MIN = 14 * 60;    // 14:00
+const AFTERNOON_END_MIN   = 17 * 60;    // 17:00
+const TIME_WINDOWS = [
+  { start: MORNING_START_MIN, end: MORNING_END_MIN },
+  { start: AFTERNOON_START_MIN, end: AFTERNOON_END_MIN },
+];
 const SLOT_STEP_MIN = 30;
 const SCAN_DAYS = 14;
 const MAX_SLOTS = 3;
@@ -74,10 +78,6 @@ function makeSlot(dateStr: string, totalMinutes: number): Date {
   const h = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
   const m = String(totalMinutes % 60).padStart(2, "0");
   return new Date(`${dateStr}T${h}:${m}:00+07:00`);
-}
-
-function overlapsLunch(startMin: number, endMin: number): boolean {
-  return startMin < LUNCH_END_MIN && endMin > LUNCH_START_MIN;
 }
 
 function overlapsAny(
@@ -148,32 +148,32 @@ export async function POST(request: Request) {
     ...calBusy.map((p) => ({ start: p.start, end: p.end })),
   ];
 
-  // 3. Find available slots, iterate day-by-day
+  // 3. Find available slots — only within allowed windows (sáng 10:30-11:30, chiều 14:00-17:00)
   const available: { start_time: string; end_time: string }[] = [];
-  const maxStartMin = WORK_END_H * 60 - duration;
 
   for (let dayOffset = 0; dayOffset < SCAN_DAYS && available.length < MAX_SLOTS; dayOffset++) {
     const dateStr = addDays(fromStr, dayOffset);
     if (weekday(dateStr) === 0 || weekday(dateStr) === 6) continue; // skip weekend
 
-    for (
-      let startMin = WORK_START_H * 60;
-      startMin <= maxStartMin && available.length < MAX_SLOTS;
-      startMin += SLOT_STEP_MIN
-    ) {
-      const endMin = startMin + duration;
+    for (const window of TIME_WINDOWS) {
+      const windowMaxStart = window.end - duration;
+      if (windowMaxStart < window.start) continue; // duration too long for this window
 
-      if (overlapsLunch(startMin, endMin)) continue;
+      for (
+        let startMin = window.start;
+        startMin <= windowMaxStart && available.length < MAX_SLOTS;
+        startMin += SLOT_STEP_MIN
+      ) {
+        const slotStart = makeSlot(dateStr, startMin);
+        const slotEnd = makeSlot(dateStr, startMin + duration);
 
-      const slotStart = makeSlot(dateStr, startMin);
-      const slotEnd = makeSlot(dateStr, endMin);
+        if (overlapsAny(slotStart, slotEnd, allBusy)) continue;
 
-      if (overlapsAny(slotStart, slotEnd, allBusy)) continue;
-
-      available.push({
-        start_time: slotStart.toISOString(),
-        end_time: slotEnd.toISOString(),
-      });
+        available.push({
+          start_time: slotStart.toISOString(),
+          end_time: slotEnd.toISOString(),
+        });
+      }
     }
   }
 

@@ -126,11 +126,17 @@ export async function POST(request: Request) {
           cvText,
         });
 
+        // Tính total_score server-side để tránh AI trả về 0
+        const totalScore = parseFloat(
+          (aiResult.job_fit_score * 0.5 + aiResult.potential_score * 0.3 + aiResult.cultural_fit_score * 0.2).toFixed(2)
+        );
+        aiResult = { ...aiResult, total_score: totalScore };
+
         await supabaseAdmin
           .from("candidates")
           .update({
             ai_score_result: aiResult,
-            total_score: aiResult.total_score,
+            total_score: totalScore,
             missing_information: aiResult.missing_information.length > 0,
             status: "Scored",
           })

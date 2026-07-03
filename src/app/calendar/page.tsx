@@ -81,7 +81,7 @@ export default function CalendarPage() {
         <div>
           <h1 className="text-xl font-semibold text-white">Lịch phỏng vấn</h1>
           <p className="text-sm text-zinc-400 mt-0.5">
-            {loading ? "Đang tải..." : `${interviews.filter(iv => iv.status === "Scheduled").length} buổi sắp tới`}
+            {loading ? "Đang tải..." : `${interviews.filter(iv => iv.status === "Scheduled" && new Date(iv.start_time) >= today).length} buổi sắp tới`}
           </p>
         </div>
         <Link

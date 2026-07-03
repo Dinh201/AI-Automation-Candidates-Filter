@@ -48,6 +48,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Deep Dark Theme (Light mode kept for compatibility) ── */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -67,11 +68,11 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: oklch(0.55 0.22 264);
+  --chart-2: oklch(0.65 0.18 230);
+  --chart-3: oklch(0.70 0.14 200);
+  --chart-4: oklch(0.75 0.10 160);
+  --chart-5: oklch(0.80 0.06 100);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -81,40 +82,49 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ATS custom tokens */
+  --ats-bg: #050c18;
+  --ats-surface: #0c1830;
+  --ats-surface-2: #111f38;
+  --ats-border: rgba(255, 255, 255, 0.07);
+  --ats-accent: #2563eb;
+  --ats-accent-muted: rgba(37, 99, 235, 0.12);
+  --ats-accent-border: rgba(37, 99, 235, 0.25);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --background: oklch(0.09 0.015 240);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.12 0.018 240);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.12 0.018 240);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.55 0.22 264);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.16 0.015 240);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.16 0.015 240);
+  --muted-foreground: oklch(0.60 0 0);
+  --accent: oklch(0.16 0.015 240);
+  --accent-foreground: oklch(0.96 0 0);
+  --destructive: oklch(0.65 0.20 22);
+  --border: oklch(1 0 0 / 7%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.55 0.22 264);
+  --chart-1: oklch(0.55 0.22 264);
+  --chart-2: oklch(0.65 0.18 230);
+  --chart-3: oklch(0.70 0.14 200);
+  --chart-4: oklch(0.75 0.10 160);
+  --chart-5: oklch(0.80 0.06 100);
+  --sidebar: oklch(0.10 0.018 240);
+  --sidebar-foreground: oklch(0.96 0 0);
+  --sidebar-primary: oklch(0.55 0.22 264);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-accent: oklch(0.15 0.015 240);
+  --sidebar-accent-foreground: oklch(0.96 0 0);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.55 0.22 264);
 }
 
 @layer base {
@@ -122,7 +132,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-[#09090b] text-foreground min-h-screen selection:bg-indigo-500/25;
+    background-color: var(--ats-bg);
+    @apply text-foreground min-h-screen selection:bg-blue-600/25;
   }
   html {
     @apply font-sans;
@@ -130,62 +141,77 @@
 }
 
 @layer utilities {
+  /* ── Core surface utilities ── */
   .glass {
-    @apply bg-zinc-900 border border-zinc-800 shadow-sm;
+    background-color: var(--ats-surface);
+    border: 1px solid var(--ats-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.04);
   }
   .glass-card {
-    @apply bg-zinc-900 border border-zinc-800 shadow-sm rounded-xl;
+    background-color: var(--ats-surface);
+    border: 1px solid var(--ats-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+    border-radius: 0.875rem;
   }
   .panel {
-    @apply bg-zinc-900 border border-zinc-800 rounded-xl;
+    background-color: var(--ats-surface);
+    border: 1px solid var(--ats-border);
+    border-radius: 0.875rem;
   }
+
+  /* ── Stat card accent utilities ── */
+  .stat-blue   { background: rgba(37,99,235,0.10); border-color: rgba(37,99,235,0.22); }
+  .stat-violet { background: rgba(124,58,237,0.10); border-color: rgba(124,58,237,0.22); }
+  .stat-emerald{ background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.22); }
+  .stat-amber  { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.22); }
+
+  /* ── Scrollbar styling ── */
+  .custom-scroll::-webkit-scrollbar       { width: 4px; }
+  .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+  .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+  .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+  /* ── Neon growth badge ── */
+  .badge-up   { color: #4ade80; background: rgba(74,222,128,0.10); }
+  .badge-down { color: #f87171; background: rgba(248,113,113,0.10); }
 }
 
 /* ── Rich Text Editor (Tiptap / ProseMirror) ── */
 .rte-content {
   font-size: 0.875rem;
   line-height: 1.65;
-  color: rgb(228 228 231);
+  color: rgb(203 213 225);
 }
 .rte-content p { margin-bottom: 0.4rem; }
 .rte-content p:last-child { margin-bottom: 0; }
 .rte-content strong { font-weight: 600; color: #fff; }
 .rte-content em { font-style: italic; }
 .rte-content u { text-decoration: underline; }
-.rte-content ul {
-  list-style-type: disc;
-  padding-left: 1.3rem;
-  margin-bottom: 0.4rem;
-}
-.rte-content ol {
-  list-style-type: decimal;
-  padding-left: 1.3rem;
-  margin-bottom: 0.4rem;
-}
-.rte-content li { margin-bottom: 0.2rem; }
-.rte-content h1 { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
-.rte-content h2 { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.4rem; }
-.rte-content h3 { font-size: 0.9rem; font-weight: 600; color: #e4e4e7; margin-bottom: 0.3rem; }
-/* Placeholder */
+.rte-content ul  { list-style-type: disc;    padding-left: 1.3rem; margin-bottom: 0.4rem; }
+.rte-content ol  { list-style-type: decimal; padding-left: 1.3rem; margin-bottom: 0.4rem; }
+.rte-content li  { margin-bottom: 0.2rem; }
+.rte-content h1  { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
+.rte-content h2  { font-size: 1rem;   font-weight: 600; color: #fff; margin-bottom: 0.4rem; }
+.rte-content h3  { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.3rem; }
 .rte-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: rgb(82 82 91);
+  color: rgb(71 85 105);
   float: left;
   height: 0;
   pointer-events: none;
 }
 
-/* ── Rendered job HTML content (expanded view) ── */
+/* ── Rendered job HTML content ── */
 .job-html {
   font-size: 0.875rem;
   line-height: 1.65;
-  color: rgb(212 212 216);
+  color: rgb(203 213 225);
 }
-.job-html p { margin-bottom: 0.4rem; }
+.job-html p          { margin-bottom: 0.4rem; }
 .job-html p:last-child { margin-bottom: 0; }
-.job-html strong { font-weight: 600; color: #fff; }
-.job-html em { font-style: italic; }
-.job-html u { text-decoration: underline; }
-.job-html ul { list-style-type: disc; padding-left: 1.3rem; margin-bottom: 0.4rem; }
-.job-html ol { list-style-type: decimal; padding-left: 1.3rem; margin-bottom: 0.4rem; }
-.job-html li { margin-bottom: 0.2rem; }
+.job-html strong     { font-weight: 600; color: #fff; }
+.job-html em         { font-style: italic; }
+.job-html u          { text-decoration: underline; }
+.job-html ul         { list-style-type: disc;    padding-left: 1.3rem; margin-bottom: 0.4rem; }
+.job-html ol         { list-style-type: decimal; padding-left: 1.3rem; margin-bottom: 0.4rem; }
+.job-html li         { margin-bottom: 0.2rem; }

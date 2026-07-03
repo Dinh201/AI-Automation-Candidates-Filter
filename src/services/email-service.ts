@@ -1,9 +1,13 @@
-<<<<<<< HEAD
 import nodemailer from "nodemailer";
 
 const GMAIL_USER = process.env.GMAIL_USER || "";
 const HR_EMAIL = process.env.HR_EMAIL || "";
 const COMPANY = "VACONS";
+const COMPANY_VI = "CÔNG TY TNHH KIẾN TRÚC XÂY DỰNG VIỆT AN (VACONS)";
+const COMPANY_EN = "VIET AN CONSTRUCTION ARCHITECTURE COMPANY LIMITED (VACONS)";
+const OFFICE_ADDRESS_VI = "Số 25, Đường 34, Phường An Khánh, TP. Hồ Chí Minh";
+const OFFICE_ADDRESS_EN = "No. 25, Street No. 34, An Khanh Ward, Ho Chi Minh City";
+const WEBSITE = "https://vacons.com.vn/";
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -18,166 +22,244 @@ function createTransporter() {
   });
 }
 
-// ─── Shared layout ────────────────────────────────────────────────────────────
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function ordinal(n: number): string {
+  if (n >= 11 && n <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1: return `${n}st`;
+    case 2: return `${n}nd`;
+    case 3: return `${n}rd`;
+    default: return `${n}th`;
+  }
+}
+
+function formatInterviewDateVN(date: Date): string {
+  const weekday = date.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", weekday: "long" });
+  const dmy = date.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" });
+  return `${weekday} – Ngày ${dmy}`;
+}
+
+function formatInterviewDateEN(date: Date): string {
+  const weekday = date.toLocaleDateString("en-US", { timeZone: "Asia/Ho_Chi_Minh", weekday: "long" });
+  const month = date.toLocaleDateString("en-US", { timeZone: "Asia/Ho_Chi_Minh", month: "long" });
+  const day = parseInt(date.toLocaleDateString("en-US", { timeZone: "Asia/Ho_Chi_Minh", day: "numeric" }), 10);
+  const year = date.toLocaleDateString("en-US", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric" });
+  return `${weekday}, ${month} ${ordinal(day)}, ${year}`;
+}
+
+function salutation(name: string, gender?: "male" | "female"): string {
+  if (gender === "male") return `Mr. ${name}`;
+  if (gender === "female") return `Ms. ${name}`;
+  return name;
+}
+
+interface InfoRow {
+  label: string;
+  value: string;
+  link?: string;
+}
 
 function emailWrapper(headerColor: string, body: string, footerNote?: string): string {
+  const foot = footerNote ?? `Email tự động từ ${COMPANY}. Vui lòng không trả lời email này.`;
   return `<!DOCTYPE html>
 <html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:40px auto">
-    <tr><td style="background:${headerColor};border-radius:12px 12px 0 0;padding:28px 32px">
-      <span style="color:#fff;font-weight:800;font-size:20px;letter-spacing:1px">${COMPANY}</span>
-    </td></tr>
-
-    <tr><td style="background:#fff;padding:32px 36px">
-      ${body}
-    </td></tr>
-
-    <tr><td style="background:#f4f4f5;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center">
-      <p style="margin:0;color:#a1a1aa;font-size:12px">
-        ${footerNote ?? `Email này được gửi tự động bởi hệ thống tuyển dụng ${COMPANY}.<br>Múi giờ: Asia/Ho_Chi_Minh (GMT+7)`}
-      </p>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 16px">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+        <tr><td style="background:${headerColor};border-radius:12px 12px 0 0;padding:28px 36px">
+          <span style="color:#fff;font-weight:700;font-size:20px;letter-spacing:-0.3px">${COMPANY}</span>
+        </td></tr>
+        <tr><td style="background:#ffffff;padding:36px;border-left:1px solid #e4e4e7;border-right:1px solid #e4e4e7">
+          ${body}
+        </td></tr>
+        <tr><td style="background:#f9f9fa;border-radius:0 0 12px 12px;border:1px solid #e4e4e7;border-top:none;padding:20px 36px;text-align:center">
+          <p style="margin:0;color:#a1a1aa;font-size:12px;line-height:1.6">${foot}</p>
+        </td></tr>
+      </table>
     </td></tr>
   </table>
 </body>
 </html>`;
 }
 
-function infoTable(rows: Array<{ label: string; value: string; link?: string }>): string {
-  const rowsHtml = rows.map(({ label, value, link }) => `
+function infoTable(rows: InfoRow[]): string {
+  const trs = rows.map(r => `
     <tr>
-      <td style="padding:8px 0;color:#71717a;font-size:14px;width:130px;vertical-align:top">${label}</td>
-      <td style="padding:8px 0;color:#18181b;font-size:14px;vertical-align:top">
-        ${link ? `<a href="${link}" style="color:#4f46e5;text-decoration:none;font-weight:600">${value}</a>` : `<strong>${value}</strong>`}
+      <td style="padding:9px 0;color:#71717a;font-size:14px;white-space:nowrap;width:130px;vertical-align:top">${r.label}</td>
+      <td style="padding:9px 0;color:#18181b;font-size:14px;font-weight:500">
+        ${r.link ? `<a href="${r.link}" style="color:#1d4ed8;text-decoration:none">${r.value}</a>` : r.value}
       </td>
     </tr>`).join("");
-  return `<div style="background:#f9f9fa;border-radius:10px;padding:20px 24px;margin-bottom:24px">
-    <table width="100%" cellpadding="0" cellspacing="0">${rowsHtml}</table>
+  return `<div style="background:#f9f9fa;border-radius:10px;padding:16px 20px;margin-bottom:24px">
+    <table width="100%" cellpadding="0" cellspacing="0">${trs}</table>
   </div>`;
 }
 
 function primaryButton(href: string, label: string): string {
-  return `<a href="${href}" style="display:inline-block;background:#1d4ed8;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.3px">${label}</a>`;
+  return `<div style="margin-bottom:24px">
+    <a href="${href}" style="display:inline-block;background:#1d4ed8;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">${label}</a>
+  </div>`;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-=======
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM || "AutoFilter <noreply@autofilter.ai>";
-const HR_EMAIL = process.env.HR_EMAIL || "";
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface InterviewEmailData {
   candidateEmail: string;
   candidateName: string;
+  gender?: "male" | "female";
   interviewerEmail: string;
   interviewerName: string;
   jobTitle: string;
   startTime: Date;
   endTime: Date;
   meetLink?: string;
-  interviewBriefUrl?: string;
   notes?: string;
 }
 
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
-function formatDateTime(date: Date): string {
-  return date.toLocaleString("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+export interface OutcomeEmailData {
+  candidateName: string;
+  candidateEmail: string;
+  jobTitle: string;
+  gender?: "male" | "female";
+  interviewerName?: string;
+  hrEmail?: string;
+  notes?: string;
 }
 
-<<<<<<< HEAD
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("vi-VN", {
-=======
-function buildEmailHtml(data: InterviewEmailData, forCandidate: boolean): string {
-  const recipient = forCandidate ? data.candidateName : data.interviewerName;
-  const role = forCandidate ? "ứng viên" : "interviewer";
-  const start = formatDateTime(data.startTime);
-  const end = data.endTime.toLocaleTimeString("vi-VN", {
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
-    timeZone: "Asia/Ho_Chi_Minh",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-<<<<<<< HEAD
+export interface CandidateAppliedData {
+  candidateName: string;
+  candidateEmail: string;
+  jobTitle: string;
+  candidateId: string;
+  appUrl: string;
+  scored: boolean;
+  totalScore?: number;
+  finalDecision?: string;
+  scoringFailed?: boolean;
 }
 
 // ─── Interview Invitation ─────────────────────────────────────────────────────
 
-export interface InterviewEmailData {
-  candidateEmail: string;
-  candidateName: string;
-  interviewerEmail: string;
-  interviewerName: string;
-  jobTitle: string;
-  startTime: Date;
-  endTime: Date;
-  meetLink?: string;
-  notes?: string;
-}
-
 function buildInterviewInviteCandidate(data: InterviewEmailData): string {
-  const start = formatDateTime(data.startTime);
-  const end = formatTime(data.endTime);
+  const startT = formatTime(data.startTime);
+  const endT = formatTime(data.endTime);
+  const timeRangeVN = `${startT} – ${endT}, ${formatInterviewDateVN(data.startTime)}`;
+  const timeRangeEN = `${startT} – ${endT}, ${formatInterviewDateEN(data.startTime)}`;
+  const salut = salutation(data.candidateName, data.gender);
 
-  const rows = [
-    { label: "Vị trí", value: data.jobTitle },
-    { label: "Interviewer", value: data.interviewerName },
-    { label: "Thời gian", value: `${start} – ${end}` },
-    ...(data.meetLink ? [{ label: "Link họp", value: "Tham gia Google Meet →", link: data.meetLink }] : []),
-  ];
+  const meetRow = data.meetLink
+    ? `<tr>
+        <td style="padding:9px 0;color:#71717a;font-size:14px;white-space:nowrap;width:170px;vertical-align:top">Link họp / Meet Link</td>
+        <td style="padding:9px 0;font-size:14px"><a href="${data.meetLink}" style="color:#1d4ed8;font-weight:500;text-decoration:none">Tham gia Google Meet →</a></td>
+      </tr>`
+    : "";
 
-  const notes = data.notes
-    ? `<div style="border-left:3px solid #1d4ed8;padding:12px 16px;margin-bottom:24px;background:#eff6ff;border-radius:0 8px 8px 0">
+  const notesBlock = data.notes
+    ? `<div style="border-left:3px solid #208994;padding:12px 16px;margin-bottom:24px;background:#eff6ff;border-radius:0 8px 8px 0">
         <p style="margin:0;color:#1e40af;font-size:14px;line-height:1.6">${data.notes}</p>
        </div>`
     : "";
 
   const body = `
-    <h2 style="margin:0 0 6px;color:#09090b;font-size:22px;font-weight:700">Thư mời phỏng vấn</h2>
-    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
-      Xin chào <strong>${data.candidateName}</strong>,
+    <p style="margin:0 0 20px;color:#09090b;font-size:15px">Dear <strong>${salut}</strong>,</p>
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
+      <strong>${COMPANY_VI}</strong> chân thành cảm ơn bạn đã quan tâm đến vị trí <strong>${data.jobTitle}</strong> mà chúng tôi đang tuyển dụng.
     </p>
-    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
-      Chúng tôi vui mừng thông báo bạn đã vượt qua vòng sơ tuyển và được mời tham dự buổi phỏng vấn
-      cho vị trí <strong>${data.jobTitle}</strong> tại <strong>${COMPANY}</strong>.
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      <strong>${COMPANY_EN}</strong> sincerely thanks you for your interest in the <strong>${data.jobTitle}</strong> position we are currently hiring for.
     </p>
-    ${infoTable(rows)}
-    ${notes}
-    <p style="margin:0 0 24px;color:#52525b;font-size:14px;line-height:1.6">
-      Vui lòng xác nhận tham dự bằng cách trả lời email này. Nếu có thay đổi về lịch,
-      hãy liên hệ sớm để chúng tôi sắp xếp lại.
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
+      Chúng tôi rất hân hạnh mời bạn đến tham dự buổi phỏng vấn trực tiếp với thông tin như sau:
     </p>
-    ${data.meetLink ? primaryButton(data.meetLink, "Tham gia buổi phỏng vấn →") : ""}
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      We are pleased to invite you to attend a face-to-face interview with the following details:
+    </p>
+
+    <div style="background:#f9f9fa;border-radius:10px;padding:16px 20px;margin-bottom:24px">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:9px 0;color:#71717a;font-size:14px;white-space:nowrap;width:170px;vertical-align:top">Thời gian / Time</td>
+          <td style="padding:9px 0;font-size:14px;font-weight:500;color:#18181b">
+            ${timeRangeVN}<br>
+            <span style="color:#6b7280;font-style:italic;font-weight:400">${timeRangeEN}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:9px 0;color:#71717a;font-size:14px;white-space:nowrap;vertical-align:top">Trụ sở / Address</td>
+          <td style="padding:9px 0;font-size:14px;font-weight:500;color:#18181b">
+            ${OFFICE_ADDRESS_VI}<br>
+            <span style="color:#6b7280;font-style:italic;font-weight:400">${OFFICE_ADDRESS_EN}</span>
+          </td>
+        </tr>
+        ${meetRow}
+      </table>
+    </div>
+
+    ${notesBlock}
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
+      Chúng tôi rất mong nhận được sự xác nhận tham dự từ bạn qua email này. Trong trường hợp bạn cần thêm thông tin hoặc gặp khó khăn về mặt thời gian, đừng ngần ngại liên hệ với chúng tôi để được hỗ trợ nhanh chóng.
+    </p>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      Please kindly confirm your attendance by replying to this email. If you require any further information or need to reschedule, feel free to contact us at the provided phone numbers.
+    </p>
+
+    <p style="margin:0 0 4px;color:#374151;font-size:15px;line-height:1.7">
+      Bạn có thể tìm hiểu thêm về công ty qua website chính thức:
+    </p>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      You can learn more about our company at: <a href="${WEBSITE}" style="color:#1d4ed8;text-decoration:none">${WEBSITE}</a>
+    </p>
+
+    <p style="margin:0 0 4px;color:#374151;font-size:15px;line-height:1.7">Chúng tôi rất mong được gặp bạn tại buổi phỏng vấn sắp tới!</p>
+    <p style="margin:0 0 32px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">We look forward to meeting you at the upcoming interview!</p>
+
+    <div style="border-top:1px solid #e5e7eb;padding-top:20px">
+      <p style="margin:0 0 2px;color:#374151;font-size:14px;font-weight:600">Thanks and Best Regards,</p>
+      <p style="margin:0 0 2px;color:#374151;font-size:14px">Ms. Nhi Nguyen</p>
+      <p style="margin:0 0 2px;color:#6b7280;font-size:13px">Talent Acquisition (HR)</p>
+      <p style="margin:0;color:#6b7280;font-size:13px">${COMPANY_EN}</p>
+    </div>
   `;
 
-  return emailWrapper("#1d4ed8", body);
+  return emailWrapper("#208994", body);
 }
 
 function buildInterviewNotifyInterviewer(data: InterviewEmailData): string {
-  const start = formatDateTime(data.startTime);
-  const end = formatTime(data.endTime);
+  const startT = formatTime(data.startTime);
+  const endT = formatTime(data.endTime);
+  const date = formatDate(data.startTime);
 
-  const rows = [
+  const rows: InfoRow[] = [
     { label: "Ứng viên", value: `${data.candidateName} (${data.candidateEmail})` },
     { label: "Vị trí", value: data.jobTitle },
-    { label: "Thời gian", value: `${start} – ${end}` },
+    { label: "Thời gian", value: `${startT} – ${endT} ${date}` },
     ...(data.meetLink ? [{ label: "Link họp", value: "Tham gia Google Meet →", link: data.meetLink }] : []),
   ];
 
   const notes = data.notes
-    ? `<div style="border-left:3px solid #1d4ed8;padding:12px 16px;margin-bottom:24px;background:#eff6ff;border-radius:0 8px 8px 0">
+    ? `<div style="border-left:3px solid #208994;padding:12px 16px;margin-bottom:24px;background:#eff6ff;border-radius:0 8px 8px 0">
         <p style="margin:0;color:#1e40af;font-size:14px;line-height:1.6"><strong>Ghi chú từ HR:</strong> ${data.notes}</p>
        </div>`
     : "";
@@ -195,7 +277,7 @@ function buildInterviewNotifyInterviewer(data: InterviewEmailData): string {
     ${data.meetLink ? primaryButton(data.meetLink, "Tham gia buổi phỏng vấn →") : ""}
   `;
 
-  return emailWrapper("#18181b", body);
+  return emailWrapper("#208994", body);
 }
 
 export async function sendInterviewInvitation(data: InterviewEmailData) {
@@ -227,41 +309,46 @@ export async function sendInterviewInvitation(data: InterviewEmailData) {
 
 // ─── Hired Notification ───────────────────────────────────────────────────────
 
-export interface OutcomeEmailData {
-  candidateName: string;
-  candidateEmail: string;
-  jobTitle: string;
-  interviewerName?: string;
-  hrEmail?: string;
-  notes?: string;
-}
-
 function buildHiredHtml(data: OutcomeEmailData): string {
+  const salut = salutation(data.candidateName, data.gender);
+  const pronoun = data.gender === "male" ? "Anh" : data.gender === "female" ? "Chị" : "Anh/Chị";
+
   const body = `
-    <h2 style="margin:0 0 6px;color:#09090b;font-size:22px;font-weight:700">🎉 Chúc mừng bạn đã được tuyển dụng!</h2>
-    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
-      Xin chào <strong>${data.candidateName}</strong>,
+    <p style="margin:0 0 20px;color:#09090b;font-size:15px">Dear <strong>${salut}</strong>,</p>
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
+      <strong>${COMPANY_VI}</strong> trân trọng thông báo ${pronoun} đã trúng tuyển vị trí <strong>${data.jobTitle}</strong> tại công ty.
     </p>
-    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
-      Sau quá trình xem xét kỹ lưỡng, chúng tôi vui mừng thông báo bạn đã <strong>vượt qua vòng phỏng vấn</strong>
-      và được tuyển chọn cho vị trí <strong>${data.jobTitle}</strong> tại <strong>${COMPANY}</strong>.
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      <strong>${COMPANY_EN}</strong> is pleased to inform you that you have been selected for the <strong>${data.jobTitle}</strong> position.
     </p>
-    ${infoTable([
-      { label: "Vị trí", value: data.jobTitle },
-      { label: "Kết quả", value: "✅ Được tuyển dụng" },
-      ...(data.interviewerName ? [{ label: "Interviewer", value: data.interviewerName }] : []),
-    ])}
-    <p style="margin:0 0 16px;color:#52525b;font-size:15px;line-height:1.6">
-      Bộ phận HR sẽ liên hệ với bạn trong thời gian sớm nhất để thông báo về ngày bắt đầu làm việc
-      và các thủ tục cần thiết.
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
+      Chúng tôi đánh giá cao năng lực, kinh nghiệm cũng như sự phù hợp của ${pronoun} với văn hóa VACONS, và tin rằng ${pronoun} sẽ đóng góp tích cực vào sự phát triển của đội ngũ.
     </p>
-    <p style="margin:0 0 24px;color:#52525b;font-size:14px;line-height:1.6">
-      Một lần nữa, chúc mừng và chào đón bạn gia nhập đội ngũ <strong>${COMPANY}</strong>!
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      We highly appreciate your qualifications and believe you will be a valuable addition to our team.
     </p>
-    ${data.hrEmail ? `<p style="margin:0;color:#71717a;font-size:13px">Nếu có câu hỏi, vui lòng liên hệ HR: <a href="mailto:${data.hrEmail}" style="color:#1d4ed8">${data.hrEmail}</a></p>` : ""}
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
+      Thông tin nhận việc cụ thể sẽ được trao đổi chi tiết qua điện thoại/Zalo trong thời gian sớm nhất.
+    </p>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      Further details regarding your onboarding will be discussed with you via phone/Zalo shortly.
+    </p>
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">Rất mong được chào đón ${pronoun} gia nhập VACONS.</p>
+    <p style="margin:0 0 32px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">We look forward to welcoming you to VACONS.</p>
+
+    <div style="border-top:1px solid #e5e7eb;padding-top:20px">
+      <p style="margin:0 0 2px;color:#374151;font-size:14px;font-weight:600">Thanks and Best Regards,</p>
+      <p style="margin:0 0 2px;color:#374151;font-size:14px">Ms. Nhi Nguyen</p>
+      <p style="margin:0 0 2px;color:#6b7280;font-size:13px">Talent Acquisition (HR)</p>
+      <p style="margin:0;color:#6b7280;font-size:13px">${COMPANY_EN}</p>
+    </div>
   `;
 
-  return emailWrapper("#15803d", body, `Email thông báo tuyển dụng từ ${COMPANY}. Vui lòng không trả lời email này.`);
+  return emailWrapper("#208994", body, `Email thông báo kết quả tuyển dụng từ ${COMPANY}.`);
 }
 
 export async function sendHiredNotification(data: OutcomeEmailData): Promise<void> {
@@ -275,35 +362,50 @@ export async function sendHiredNotification(data: OutcomeEmailData): Promise<voi
   });
 }
 
-// ─── Rejected Notification ────────────────────────────────────────────────────
+// ─── Rejected Notification (VACONS official template) ────────────────────────
 
 function buildRejectedHtml(data: OutcomeEmailData): string {
   const body = `
-    <h2 style="margin:0 0 6px;color:#09090b;font-size:22px;font-weight:700">Kết quả ứng tuyển tại ${COMPANY}</h2>
-    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
-      Xin chào <strong>${data.candidateName}</strong>,
+    <p style="margin:0 0 24px;color:#09090b;font-size:15px">Dear <strong>${data.candidateName}</strong>,</p>
+
+    <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
+      <strong>${COMPANY_VI}</strong> chân thành cảm ơn bạn đã tham gia phỏng vấn cho vị trí
+      <strong>${data.jobTitle}</strong> tại công ty.
     </p>
-    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
-      Cảm ơn bạn đã dành thời gian tham dự buổi phỏng vấn cho vị trí
-      <strong>${data.jobTitle}</strong> tại <strong>${COMPANY}</strong>.
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      ${COMPANY_EN} sincerely thanks you for attending the interview for the
+      <strong>${data.jobTitle}</strong> position.
     </p>
-    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
-      Sau khi cân nhắc kỹ lưỡng, chúng tôi rất tiếc phải thông báo rằng hồ sơ của bạn
-      chưa phù hợp với yêu cầu của vị trí này ở thời điểm hiện tại.
+
+    <p style="margin:0 0 4px;color:#374151;font-size:15px;line-height:1.7">
+      Sau khi đánh giá kỹ hồ sơ, chúng tôi rất tiếc thông báo rằng ${COMPANY} chưa thể tiếp tục với đơn ứng tuyển của bạn ở thời điểm này.
     </p>
-    ${infoTable([
-      { label: "Vị trí", value: data.jobTitle },
-      { label: "Kết quả", value: "Chưa phù hợp lần này" },
-    ])}
-    <p style="margin:0 0 24px;color:#52525b;font-size:14px;line-height:1.6">
-      Đây không phải là đánh giá về năng lực của bạn, mà là sự phù hợp với nhu cầu
-      cụ thể của vị trí tại thời điểm này. Chúng tôi trân trọng sự quan tâm của bạn
-      và khuyến khích bạn theo dõi các cơ hội tiếp theo tại ${COMPANY}.
+    <p style="margin:0 0 4px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      After careful evaluation, we regret to inform you that ${COMPANY} will not be proceeding with your application at this time.
     </p>
-    ${data.hrEmail ? `<p style="margin:0;color:#71717a;font-size:13px">Nếu có câu hỏi, vui lòng liên hệ: <a href="mailto:${data.hrEmail}" style="color:#1d4ed8">${data.hrEmail}</a></p>` : ""}
+    <p style="margin:0 0 4px;color:#374151;font-size:15px;line-height:1.7">
+      Quyết định này dựa trên định hướng và nhu cầu hiện tại của vị trí, không phản ánh toàn diện giá trị và kinh nghiệm mà bạn mang lại.
+    </p>
+    <p style="margin:0 0 28px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      This decision reflects the current direction and needs of the position and is not a full assessment of your experience or professional strengths.
+    </p>
+
+    <p style="margin:0 0 4px;color:#374151;font-size:15px;line-height:1.7">
+      Chúng tôi cảm ơn sự quan tâm của bạn tới ${COMPANY} và chúc bạn nhiều thành công trong tương lai.
+    </p>
+    <p style="margin:0 0 32px;color:#6b7280;font-size:14px;line-height:1.7;font-style:italic">
+      We appreciate your interest in ${COMPANY} and wish you every success in the future.
+    </p>
+
+    <div style="border-top:1px solid #e5e7eb;padding-top:20px">
+      <p style="margin:0 0 2px;color:#374151;font-size:14px;font-weight:600">Kind regards,</p>
+      <p style="margin:0 0 2px;color:#374151;font-size:14px">Ms. Nhi Nguyen</p>
+      <p style="margin:0 0 2px;color:#6b7280;font-size:13px">Talent acquisition (HR)</p>
+      <p style="margin:0;color:#6b7280;font-size:13px">${COMPANY_EN}</p>
+    </div>
   `;
 
-  return emailWrapper("#18181b", body, `Email thông báo kết quả tuyển dụng từ ${COMPANY}. Vui lòng không trả lời email này.`);
+  return emailWrapper("#208994", body, `Email thông báo kết quả tuyển dụng từ ${COMPANY}.`);
 }
 
 export async function sendRejectedNotification(data: OutcomeEmailData): Promise<void> {
@@ -319,127 +421,23 @@ export async function sendRejectedNotification(data: OutcomeEmailData): Promise<
 
 // ─── Candidate Applied Notification (to HR) ───────────────────────────────────
 
-=======
-
-  return `<!DOCTYPE html>
-<html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:40px auto">
-    <tr><td style="background:#18181b;border-radius:12px 12px 0 0;padding:28px 32px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="background:#4f46e5;width:32px;height:32px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center">
-          <span style="color:#fff;font-size:16px">⚡</span>
-        </div>
-        <span style="color:#fff;font-weight:700;font-size:18px">AutoFilter</span>
-      </div>
-    </td></tr>
-
-    <tr><td style="background:#fff;padding:32px">
-      <h2 style="margin:0 0 8px;color:#09090b;font-size:22px">
-        ${forCandidate ? "Thư mời phỏng vấn" : "Lịch phỏng vấn mới"}
-      </h2>
-      <p style="margin:0 0 24px;color:#71717a;font-size:15px">
-        Xin chào <strong>${recipient}</strong>,
-        ${forCandidate
-          ? ` chúng tôi vui mừng thông báo bạn đã được mời phỏng vấn vị trí <strong>${data.jobTitle}</strong>.`
-          : ` bạn có một lịch phỏng vấn ${role} mới được tạo.`}
-      </p>
-
-      <div style="background:#f4f4f5;border-radius:8px;padding:20px;margin-bottom:24px">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px;width:120px">Vị trí</td>
-            <td style="padding:6px 0;color:#18181b;font-size:14px;font-weight:600">${data.jobTitle}</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px">Ứng viên</td>
-            <td style="padding:6px 0;color:#18181b;font-size:14px">${data.candidateName}</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px">Interviewer</td>
-            <td style="padding:6px 0;color:#18181b;font-size:14px">${data.interviewerName}</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px">Thời gian</td>
-            <td style="padding:6px 0;color:#18181b;font-size:14px"><strong>${start}</strong> – ${end}</td>
-          </tr>
-          ${data.meetLink ? `<tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px">Meet link</td>
-            <td style="padding:6px 0"><a href="${data.meetLink}" style="color:#4f46e5;text-decoration:none;font-size:14px">Tham gia buổi phỏng vấn →</a></td>
-          </tr>` : ""}
-        </table>
-      </div>
-
-      ${data.notes ? `<div style="border-left:3px solid #4f46e5;padding:12px 16px;margin-bottom:24px;background:#eef2ff;border-radius:0 8px 8px 0">
-        <p style="margin:0;color:#3730a3;font-size:14px">${data.notes}</p>
-      </div>` : ""}
-
-      ${!forCandidate && data.interviewBriefUrl ? `<div style="margin-bottom:24px">
-        <a href="${data.interviewBriefUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
-          Xem Interview Kit →
-        </a>
-        <p style="margin:8px 0 0;color:#71717a;font-size:12px">Bao gồm hồ sơ ứng viên, điểm AI, và câu hỏi gợi ý.</p>
-      </div>` : ""}
-
-    </td></tr>
-
-    <tr><td style="background:#f4f4f5;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center">
-      <p style="margin:0;color:#a1a1aa;font-size:12px">
-        Email này được gửi tự động từ hệ thống AutoFilter AI Recruitment.<br>
-        Múi giờ: Asia/Ho_Chi_Minh (GMT+7)
-      </p>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-}
-
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
-export interface CandidateAppliedData {
-  candidateName: string;
-  candidateEmail: string;
-  jobTitle: string;
-  candidateId: string;
-  appUrl: string;
-  scored: boolean;
-  totalScore?: number;
-  finalDecision?: string;
-  scoringFailed?: boolean;
-}
-
 function decisionLabel(d?: string): string {
   switch (d) {
     case "STRONG HIRE": return "Strong Hire";
-    case "HIRE":        return "Hire";
-    case "CONSIDER":    return "Cân nhắc";
-    case "REJECT":      return "Từ chối";
-    default:            return d ?? "—";
+    case "HIRE": return "Hire";
+    case "CONSIDER": return "Cân nhắc";
+    case "REJECT": return "Từ chối";
+    default: return d ?? "—";
   }
 }
 
 function buildCandidateAppliedHtml(data: CandidateAppliedData): string {
-<<<<<<< HEAD
-  const scoreRow = data.scored && data.totalScore != null
-    ? `<tr>
-        <td style="padding:8px 0;color:#71717a;font-size:14px;width:140px">Điểm AI</td>
-        <td style="padding:8px 0;color:#18181b;font-size:14px;font-weight:600">
-=======
-  const scoreHtml = data.scored && data.totalScore != null
-    ? `<tr>
-        <td style="padding:6px 0;color:#71717a;font-size:14px;width:140px">Điểm AI</td>
-        <td style="padding:6px 0;color:#18181b;font-size:14px;font-weight:600">
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
-          ${data.totalScore.toFixed(1)}/10 · ${decisionLabel(data.finalDecision)}
-        </td>
-       </tr>`
-    : data.scoringFailed
-      ? `<tr>
-<<<<<<< HEAD
-          <td style="padding:8px 0;color:#71717a;font-size:14px">Điểm AI</td>
-          <td style="padding:8px 0;color:#ef4444;font-size:14px">⚠️ Chấm điểm thất bại — cần review thủ công</td>
-         </tr>`
-      : "";
+  const scoreRows: InfoRow[] = [];
+  if (data.scored && data.totalScore != null) {
+    scoreRows.push({ label: "Điểm AI", value: `${data.totalScore.toFixed(1)}/10 · ${decisionLabel(data.finalDecision)}` });
+  } else if (data.scoringFailed) {
+    scoreRows.push({ label: "Điểm AI", value: "⚠️ Chấm điểm thất bại — cần review thủ công" });
+  }
 
   const body = `
     <h2 style="margin:0 0 6px;color:#09090b;font-size:22px;font-weight:700">Ứng viên mới đã nộp hồ sơ</h2>
@@ -447,23 +445,12 @@ function buildCandidateAppliedHtml(data: CandidateAppliedData): string {
       Hệ thống vừa nhận được CV từ ứng viên <strong>${data.candidateName}</strong>
       cho vị trí <strong>${data.jobTitle}</strong>.
     </p>
-    <div style="background:#f9f9fa;border-radius:10px;padding:20px 24px;margin-bottom:24px">
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="padding:8px 0;color:#71717a;font-size:14px;width:140px">Ứng viên</td>
-          <td style="padding:8px 0;color:#18181b;font-size:14px;font-weight:600">${data.candidateName}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#71717a;font-size:14px">Email</td>
-          <td style="padding:8px 0;color:#18181b;font-size:14px">${data.candidateEmail}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#71717a;font-size:14px">Vị trí</td>
-          <td style="padding:8px 0;color:#18181b;font-size:14px">${data.jobTitle}</td>
-        </tr>
-        ${scoreRow}
-      </table>
-    </div>
+    ${infoTable([
+    { label: "Ứng viên", value: data.candidateName },
+    { label: "Email", value: data.candidateEmail },
+    { label: "Vị trí", value: data.jobTitle },
+    ...scoreRows,
+  ])}
     ${primaryButton(`${data.appUrl}/candidates/${data.candidateId}`, "Xem hồ sơ ứng viên →")}
   `;
 
@@ -480,97 +467,3 @@ export async function sendCandidateAppliedNotification(data: CandidateAppliedDat
     html: buildCandidateAppliedHtml(data),
   });
 }
-=======
-          <td style="padding:6px 0;color:#71717a;font-size:14px">Điểm AI</td>
-          <td style="padding:6px 0;color:#ef4444;font-size:14px">⚠️ Chấm điểm thất bại — cần review thủ công</td>
-         </tr>`
-      : "";
-
-  return `<!DOCTYPE html>
-<html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:40px auto">
-    <tr><td style="background:#18181b;border-radius:12px 12px 0 0;padding:28px 32px">
-      <div>
-        <div style="background:#4f46e5;width:32px;height:32px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center">
-          <span style="color:#fff;font-size:16px">⚡</span>
-        </div>
-        <span style="color:#fff;font-weight:700;font-size:18px;margin-left:10px;vertical-align:middle">AutoFilter</span>
-      </div>
-    </td></tr>
-
-    <tr><td style="background:#fff;padding:32px">
-      <h2 style="margin:0 0 8px;color:#09090b;font-size:22px">Ứng viên mới đã nộp hồ sơ</h2>
-      <p style="margin:0 0 24px;color:#71717a;font-size:15px">
-        Hệ thống vừa nhận được CV từ ứng viên <strong>${data.candidateName}</strong> cho vị trí <strong>${data.jobTitle}</strong>.
-      </p>
-
-      <div style="background:#f4f4f5;border-radius:8px;padding:20px;margin-bottom:24px">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px;width:140px">Ứng viên</td>
-            <td style="padding:6px 0;color:#18181b;font-size:14px;font-weight:600">${data.candidateName}</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px">Email</td>
-            <td style="padding:6px 0;color:#18181b;font-size:14px">${data.candidateEmail}</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;color:#71717a;font-size:14px">Vị trí</td>
-            <td style="padding:6px 0;color:#18181b;font-size:14px">${data.jobTitle}</td>
-          </tr>
-          ${scoreHtml}
-        </table>
-      </div>
-
-      <a href="${data.appUrl}/candidates/${data.candidateId}"
-         style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
-        Xem hồ sơ ứng viên →
-      </a>
-    </td></tr>
-
-    <tr><td style="background:#f4f4f5;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center">
-      <p style="margin:0;color:#a1a1aa;font-size:12px">
-        Email tự động từ AutoFilter AI Recruitment.
-      </p>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-}
-
-export async function sendCandidateAppliedNotification(data: CandidateAppliedData): Promise<void> {
-  if (!HR_EMAIL) return; // bỏ qua nếu chưa cấu hình HR_EMAIL
-  await resend.emails.send({
-    from: FROM,
-    to: HR_EMAIL,
-    subject: `[AutoFilter] Hồ sơ mới: ${data.candidateName} – ${data.jobTitle}`,
-    html: buildCandidateAppliedHtml(data),
-  });
-}
-
-export async function sendInterviewInvitation(data: InterviewEmailData) {
-  const [candidateResult, interviewerResult] = await Promise.allSettled([
-    resend.emails.send({
-      from: FROM,
-      to: data.candidateEmail,
-      subject: `[AutoFilter] Thư mời phỏng vấn – ${data.jobTitle}`,
-      html: buildEmailHtml(data, true),
-    }),
-    resend.emails.send({
-      from: FROM,
-      to: data.interviewerEmail,
-      subject: `[AutoFilter] Lịch phỏng vấn: ${data.candidateName} – ${data.jobTitle}`,
-      html: buildEmailHtml(data, false),
-    }),
-  ]);
-
-  const errors: string[] = [];
-  if (candidateResult.status === "rejected") errors.push(`candidate: ${candidateResult.reason}`);
-  if (interviewerResult.status === "rejected") errors.push(`interviewer: ${interviewerResult.reason}`);
-
-  if (errors.length === 2) throw new Error(`Email failed: ${errors.join("; ")}`);
-  return { partial: errors.length === 1, errors };
-}
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88

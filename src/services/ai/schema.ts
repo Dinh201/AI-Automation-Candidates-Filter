@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const candidateScoringSchema = z.object({
+  candidate_name: z.string().optional().describe("Tên đầy đủ của ứng viên trích xuất từ CV (thường ở đầu CV). Để trống nếu không tìm thấy."),
   total_score: z.number().describe("Tổng điểm của ứng viên (Thang điểm 0-10)"),
   cultural_fit_score: z.number().describe("Điểm độ phù hợp văn hóa (0-10)"),
   job_fit_score: z.number().describe("Điểm mức độ đáp ứng công việc (0-10)"),

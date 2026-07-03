@@ -22,16 +22,11 @@ export interface CreatedEvent {
   htmlLink: string;
 }
 
-<<<<<<< HEAD
 export function buildOAuthUrl(returnTo?: string): string {
-=======
-export function buildOAuthUrl(): string {
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID!,
     redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
     response_type: "code",
-<<<<<<< HEAD
     // calendar.readonly needed for freeBusy queries; calendar.events for creating events
     scope: "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events",
     access_type: "offline",
@@ -50,11 +45,6 @@ export function buildGmailOAuthUrl(returnTo?: string): string {
     access_type: "offline",
     prompt: "consent",
     ...(returnTo ? { state: returnTo } : {}),
-=======
-    scope: "https://www.googleapis.com/auth/calendar.events",
-    access_type: "offline",
-    prompt: "consent",
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
@@ -157,7 +147,6 @@ export async function createCalendarEvent(
     htmlLink: json.htmlLink,
   };
 }
-<<<<<<< HEAD
 
 export async function deleteCalendarEvent(
   tokens: GoogleTokens,
@@ -211,5 +200,3 @@ export async function checkFreeBusy(
   const json = await res.json();
   return (json.calendars?.[calendarId]?.busy ?? []) as BusyPeriod[];
 }
-=======
->>>>>>> b9b0b3d85f16a8e5c6e69e442cab98e01a07ca88

@@ -149,13 +149,22 @@ export async function initGmailReader(): Promise<{ token: string; processedLabel
   return { token, processedLabelId };
 }
 
-export async function listUnprocessedEmailIds(token: string): Promise<string[]> {
-  const query = encodeURIComponent(
-    `has:attachment filename:pdf -label:${PROCESSED_LABEL_NAME}`
+export async function listUnprocessedEmailIds(
+  token: string,
+  subjectKeywords?: string[]
+): Promise<string[]> {
+  let q = `has:attachment filename:pdf -label:${PROCESSED_LABEL_NAME}`;
+
+  if (subjectKeywords && subjectKeywords.length > 0) {
+    // Gmail subject filter: subject:("keyword1" OR "keyword2" OR ...)
+    const kw = subjectKeywords.map((k) => `"${k}"`).join(" OR ");
+    q += ` subject:(${kw})`;
+  }
+
+  const res = await fetch(
+    `${GMAIL_API}/messages?q=${encodeURIComponent(q)}&maxResults=10`,
+    { headers: { Authorization: `Bearer ${token}` } }
   );
-  const res = await fetch(`${GMAIL_API}/messages?q=${query}&maxResults=20`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
 
   if (!res.ok) throw new Error("Không thể list Gmail messages");
   const data = await res.json();

@@ -30,6 +30,7 @@ export async function scoreCandidate(
   // In a real implementation with OpenAI SDK v4.50+, you can use `zodResponseFormat` directly.
   const schemaDescription = `Bắt buộc trả về JSON với cấu trúc chính xác như sau:
 {
+  "candidate_name": string,
   "total_score": number,
   "cultural_fit_score": number,
   "job_fit_score": number,

@@ -161,6 +161,7 @@ export default function CvAnalyzerPage() {
       setResult(data.result);
       setJobTitle(data.jobTitle);
       setCandidateId(data.candidateId);
+      if (data.candidateName && !candidateName.trim()) setCandidateName(data.candidateName);
       setPhase("result");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Có lỗi xảy ra");
