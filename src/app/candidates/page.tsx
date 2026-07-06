@@ -374,9 +374,7 @@ export default function CandidatesPage() {
               <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
               <span className="text-sm text-zinc-300 font-medium">Gmail đã kết nối</span>
             </div>
-            {gmailStatus === "connected_env" && (
-              <span className="text-xs text-zinc-600">( )</span>
-            )}
+            {gmailStatus === "connected_env"}
             {scanResult && (
               <span className="text-xs text-zinc-400">
                 — Vừa quét: {scanResult.processed} email, tạo mới {scanResult.created} ứng viên
