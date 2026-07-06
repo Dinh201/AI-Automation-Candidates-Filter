@@ -326,7 +326,7 @@ export default function JobsPage() {
             boxShadow: "0 2px 10px rgba(37,99,235,0.4)",
           }}
         >
-          <Plus className="w-4 h-4" /> + New position
+          <Plus className="w-4 h-4" /> New position
         </button>
       </div>
 
@@ -336,9 +336,8 @@ export default function JobsPage() {
           <button
             key={value}
             onClick={() => setActiveTab(value)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-              activeTab === value ? "text-white" : "hover:text-slate-300"
-            }`}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${activeTab === value ? "text-white" : "hover:text-slate-300"
+              }`}
             style={{ color: activeTab === value ? "white" : "rgba(100,116,139,0.85)" }}
           >
             {label}
@@ -596,13 +595,12 @@ export default function JobsPage() {
                         key={s.value}
                         type="button"
                         onClick={() => set("status", s.value)}
-                        className={`flex-1 py-2.5 px-3 rounded-xl text-left border transition-colors ${
-                          form.status === s.value
+                        className={`flex-1 py-2.5 px-3 rounded-xl text-left border transition-colors ${form.status === s.value
                             ? s.value === "Open"
                               ? "bg-green-500/10 border-green-500/30 text-green-300"
                               : "bg-red-500/10 border-red-500/30 text-red-300"
                             : "border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                        }`}
+                          }`}
                       >
                         <p className="text-xs font-semibold">{s.label}</p>
                         <p className="text-[10px] opacity-60 mt-0.5">{s.desc}</p>
@@ -672,11 +670,10 @@ export default function JobsPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-zinc-400">Tổng trọng số phải bằng 100%</p>
                     <span
-                      className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
-                        weightSum() === 100
+                      className={`text-xs font-bold px-2.5 py-1 rounded-lg ${weightSum() === 100
                           ? "bg-green-500/15 text-green-400"
                           : "bg-red-500/15 text-red-400"
-                      }`}
+                        }`}
                     >
                       Tổng: {weightSum()}%
                     </span>
