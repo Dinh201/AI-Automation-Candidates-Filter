@@ -27,9 +27,9 @@ const SCAN_SUBJECT_KEYWORDS: string[] = [
   // Từ khóa generic cho CV / đơn ứng tuyển
   "cv", "resume", "ứng tuyển", "xin việc", "apply", "application",
   // Tên vị trí cụ thể
-  "frontend", "fe developer",
-  "backend", "be developer",
-  "fullstack", "full-stack", "full stack",
+  "BDE", "Business Development Executive (Leasing/Design & Build/Furniture)",
+  "Graphic Designer", "Graphic Designer ",
+  "Content Marketing", "Digital Marketing", "Social Media Executive",
   // Thêm từ khóa tại đây:
 ];
 
@@ -38,12 +38,18 @@ const SCAN_SUBJECT_KEYWORDS: string[] = [
 // Chỉ ảnh hưởng đến việc PHÂN LOẠI (gán vào job nào), không ảnh hưởng đến
 // việc CÓ lấy email hay không (xem SCAN_SUBJECT_KEYWORDS ở trên).
 const SUBJECT_ALIASES: { keyword: string; jobTitle: string }[] = [
-  { keyword: "frontend", jobTitle: "Frontend Developer" },
-  { keyword: "fe developer", jobTitle: "Frontend Developer" },
-  { keyword: "backend", jobTitle: "Backend Developer" },
-  { keyword: "be developer", jobTitle: "Backend Developer" },
-  { keyword: "fullstack", jobTitle: "Full Stack Developer" },
-  { keyword: "full-stack", jobTitle: "Full Stack Developer" },
+  // BDE — viết tắt, cần map sang tên đầy đủ trong DB
+  { keyword: "bde", jobTitle: "Business Development Executive (Leasing/Design & Build/Furniture)" },
+  { keyword: "business development executive", jobTitle: "Business Development Executive (Leasing/Design & Build/Furniture)" },
+  { keyword: "business development", jobTitle: "Business Development Executive (Leasing/Design & Build/Furniture)" },
+  // Graphic Designer
+  { keyword: "graphic designer", jobTitle: "Graphic Designer" },
+  // Marketing
+  { keyword: "content marketing", jobTitle: "Content Marketing" },
+  { keyword: "digital marketing", jobTitle: "Digital Marketing" },
+  // Social Media
+  { keyword: "social media executive", jobTitle: "Social Media Executive" },
+  { keyword: "social media", jobTitle: "Social Media Executive" },
   // Thêm dòng mới ở đây theo cú pháp: { keyword: "...", jobTitle: "..." },
 ];
 // ─────────────────────────────────────────────────────────────────────────────

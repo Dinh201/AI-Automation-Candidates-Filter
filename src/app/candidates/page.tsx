@@ -37,22 +37,22 @@ function decisionConfig(decision?: string) {
 
 function statusConfig(status: string) {
   switch (status) {
-    case "Scored":       return { label: "Đã chấm điểm", className: "bg-green-500/15 text-green-400" };
-    case "Scoring":      return { label: "Đang chấm...",  className: "bg-blue-500/15 text-blue-400" };
-    case "New":          return { label: "Mới",            className: "bg-slate-500/15 text-slate-400" };
-    case "Interviewing": return { label: "Phỏng vấn",     className: "bg-purple-500/15 text-purple-400" };
-    case "Hired":        return { label: "Đã tuyển",      className: "bg-emerald-500/15 text-emerald-400" };
-    case "Rejected":     return { label: "Từ chối",       className: "bg-red-500/15 text-red-400" };
-    default:             return { label: status,           className: "bg-slate-500/15 text-slate-400" };
+    case "Scored": return { label: "Đã chấm điểm", className: "bg-green-500/15 text-green-400" };
+    case "Scoring": return { label: "Đang chấm...", className: "bg-blue-500/15 text-blue-400" };
+    case "New": return { label: "Mới", className: "bg-slate-500/15 text-slate-400" };
+    case "Interviewing": return { label: "Phỏng vấn", className: "bg-purple-500/15 text-purple-400" };
+    case "Hired": return { label: "Đã tuyển", className: "bg-emerald-500/15 text-emerald-400" };
+    case "Rejected": return { label: "Từ chối", className: "bg-red-500/15 text-red-400" };
+    default: return { label: status, className: "bg-slate-500/15 text-slate-400" };
   }
 }
 
 function confidenceConfig(level?: string) {
   switch (level) {
-    case "High":   return "text-green-400";
+    case "High": return "text-green-400";
     case "Medium": return "text-amber-400";
-    case "Low":    return "text-red-400";
-    default:       return "text-slate-500";
+    case "Low": return "text-red-400";
+    default: return "text-slate-500";
   }
 }
 
@@ -247,10 +247,10 @@ export default function CandidatesPage() {
   };
 
   const PIPELINE_STAGES = [
-    { key: "new",         label: "Nhận CV",    count: pipelineCounts.new,         color: "#60a5fa", accent: "rgba(37,99,235,0.12)",  border: "rgba(37,99,235,0.22)" },
-    { key: "scored",      label: "Sàng lọc AI",count: pipelineCounts.scored,      color: "#a78bfa", accent: "rgba(124,58,237,0.12)", border: "rgba(124,58,237,0.22)" },
-    { key: "interviewing",label: "Phỏng vấn",  count: pipelineCounts.interviewing, color: "#fb923c", accent: "rgba(234,88,12,0.12)",  border: "rgba(234,88,12,0.22)" },
-    { key: "closed",      label: "Kết quả",    count: pipelineCounts.closed,      color: "#34d399", accent: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.22)" },
+    { key: "new", label: "Nhận CV", count: pipelineCounts.new, color: "#60a5fa", accent: "rgba(37,99,235,0.12)", border: "rgba(37,99,235,0.22)" },
+    { key: "scored", label: "Sàng lọc AI", count: pipelineCounts.scored, color: "#a78bfa", accent: "rgba(124,58,237,0.12)", border: "rgba(124,58,237,0.22)" },
+    { key: "interviewing", label: "Phỏng vấn", count: pipelineCounts.interviewing, color: "#fb923c", accent: "rgba(234,88,12,0.12)", border: "rgba(234,88,12,0.22)" },
+    { key: "closed", label: "Kết quả", count: pipelineCounts.closed, color: "#34d399", accent: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.22)" },
   ];
 
   return (
@@ -375,7 +375,7 @@ export default function CandidatesPage() {
               <span className="text-sm text-zinc-300 font-medium">Gmail đã kết nối</span>
             </div>
             {gmailStatus === "connected_env" && (
-              <span className="text-xs text-zinc-600">(qua env)</span>
+              <span className="text-xs text-zinc-600">( )</span>
             )}
             {scanResult && (
               <span className="text-xs text-zinc-400">
