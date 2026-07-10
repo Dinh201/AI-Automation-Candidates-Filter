@@ -198,9 +198,7 @@ function LoginForm() {
         position: "absolute", top: 22, left: 0, right: 0,
         display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
       }}>
-        <div style={{ borderRadius: "50%", boxShadow: "0 0 14px rgba(0,200,255,0.22)", flexShrink: 0 }}>
-          <StarLogo size={30} />
-        </div>
+        <StarLogo size={40} />
         <span style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.01em" }}>
           ATS Internal
         </span>

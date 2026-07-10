@@ -23,45 +23,45 @@ const STATUS_OPTIONS = ["Tất cả", "New", "Scoring", "Scored", "Interviewing"
 function decisionConfig(decision?: string) {
   switch (decision) {
     case "STRONG HIRE":
-      return { label: "Strong Hire", className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" };
+      return { label: "Strong Hire", className: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/20" };
     case "HIRE":
-      return { label: "Hire", className: "bg-blue-500/15 text-blue-400 border-blue-500/20" };
+      return { label: "Hire", className: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/20" };
     case "CONSIDER":
-      return { label: "Consider", className: "bg-amber-500/15 text-amber-400 border-amber-500/20" };
+      return { label: "Consider", className: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/20" };
     case "REJECT":
-      return { label: "Reject", className: "bg-red-500/15 text-red-400 border-red-500/20" };
+      return { label: "Reject", className: "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/20" };
     default:
-      return { label: "—", className: "bg-slate-700/40 text-slate-500 border-slate-700/40" };
+      return { label: "—", className: "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-700/40 dark:text-slate-500 dark:border-slate-700/40" };
   }
 }
 
 function statusConfig(status: string) {
   switch (status) {
-    case "Scored": return { label: "Đã chấm điểm", className: "bg-green-500/15 text-green-400" };
-    case "Scoring": return { label: "Đang chấm...", className: "bg-blue-500/15 text-blue-400" };
-    case "New": return { label: "Mới", className: "bg-slate-500/15 text-slate-400" };
-    case "Interviewing": return { label: "Phỏng vấn", className: "bg-purple-500/15 text-purple-400" };
-    case "Hired": return { label: "Đã tuyển", className: "bg-emerald-500/15 text-emerald-400" };
-    case "Rejected": return { label: "Từ chối", className: "bg-red-500/15 text-red-400" };
-    default: return { label: status, className: "bg-slate-500/15 text-slate-400" };
+    case "Scored":       return { label: "Đã chấm điểm", className: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400" };
+    case "Scoring":      return { label: "Đang chấm...",  className: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400" };
+    case "New":          return { label: "Mới",           className: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400" };
+    case "Interviewing": return { label: "Phỏng vấn",     className: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400" };
+    case "Hired":        return { label: "Đã tuyển",      className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" };
+    case "Rejected":     return { label: "Từ chối",       className: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" };
+    default:             return { label: status,          className: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400" };
   }
 }
 
 function confidenceConfig(level?: string) {
   switch (level) {
-    case "High": return "text-green-400";
-    case "Medium": return "text-amber-400";
-    case "Low": return "text-red-400";
-    default: return "text-slate-500";
+    case "High":   return "text-green-600 dark:text-green-400";
+    case "Medium": return "text-amber-600 dark:text-amber-400";
+    case "Low":    return "text-red-600 dark:text-red-400";
+    default:       return "text-slate-400 dark:text-slate-500";
   }
 }
 
 function ScoreCell({ score }: { score: number | null }) {
-  if (score == null) return <span className="text-slate-600">—</span>;
-  const color = score >= 7 ? "text-emerald-400" : score >= 5 ? "text-amber-400" : "text-red-400";
+  if (score == null) return <span className="text-slate-400 dark:text-slate-600">—</span>;
+  const cls = score >= 7 ? "ats-score-good" : score >= 5 ? "ats-score-mid" : "ats-score-low";
   return (
-    <span className={`font-semibold ${color}`}>
-      {score.toFixed(1)}<span className="text-slate-600 font-normal text-xs">/10</span>
+    <span className={`tabular-nums ${cls}`}>
+      {score.toFixed(1)}<span className="text-slate-400 dark:text-slate-600 font-normal text-xs">/10</span>
     </span>
   );
 }
@@ -247,10 +247,10 @@ export default function CandidatesPage() {
   };
 
   const PIPELINE_STAGES = [
-    { key: "new", label: "Nhận CV", count: pipelineCounts.new, color: "#60a5fa", accent: "rgba(37,99,235,0.12)", border: "rgba(37,99,235,0.22)" },
-    { key: "scored", label: "Sàng lọc AI", count: pipelineCounts.scored, color: "#a78bfa", accent: "rgba(124,58,237,0.12)", border: "rgba(124,58,237,0.22)" },
-    { key: "interviewing", label: "Phỏng vấn", count: pipelineCounts.interviewing, color: "#fb923c", accent: "rgba(234,88,12,0.12)", border: "rgba(234,88,12,0.22)" },
-    { key: "closed", label: "Kết quả", count: pipelineCounts.closed, color: "#34d399", accent: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.22)" },
+    { key: "new",          label: "Nhận CV",     count: pipelineCounts.new,          cardCls: "pipe-card-recv" },
+    { key: "scored",       label: "Sàng lọc AI", count: pipelineCounts.scored,       cardCls: "pipe-card-ai"   },
+    { key: "interviewing", label: "Phỏng vấn",   count: pipelineCounts.interviewing, cardCls: "pipe-card-iv"   },
+    { key: "closed",       label: "Kết quả",     count: pipelineCounts.closed,       cardCls: "pipe-card-res"  },
   ];
 
   return (
@@ -258,18 +258,14 @@ export default function CandidatesPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Ứng viên</h1>
-          <p className="text-sm mt-0.5" style={{ color: "rgba(100,116,139,0.9)" }}>
+          <h1 className="text-2xl font-bold tracking-tight ats-text-h">Ứng viên</h1>
+          <p className="text-sm mt-0.5 ats-text-muted">
             {loading ? "Đang tải..." : `${filtered.length} / ${candidates.length} ứng viên`}
           </p>
         </div>
         <Link
           href="/cv-analyzer"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
-          style={{
-            background: "linear-gradient(135deg, #1d4ed8, #2563eb)",
-            boxShadow: "0 2px 8px rgba(37,99,235,0.35)",
-          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ats-btn-primary"
         >
           + Phân tích CV mới
         </Link>
@@ -279,39 +275,28 @@ export default function CandidatesPage() {
       {!loading && candidates.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {PIPELINE_STAGES.map((stage, i) => (
-            <div
-              key={stage.key}
-              className="relative rounded-xl p-4"
-              style={{ background: stage.accent, border: `1px solid ${stage.border}` }}
-            >
+            <div key={stage.key} className={`relative rounded-xl p-4 ${stage.cardCls}`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <p
-                    className="text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: stage.color, opacity: 0.85 }}
-                  >
+                  <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
                     {stage.label}
                   </p>
-                  <p className="text-2xl font-bold text-white mt-1 tabular-nums">
+                  <p className="text-2xl font-bold mt-1 tabular-nums">
                     {stage.count}
                   </p>
                 </div>
-                <div
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-md tabular-nums"
-                  style={{ color: stage.color, background: `${stage.border}` }}
-                >
+                <div className="pipe-badge text-[10px] font-bold px-1.5 py-0.5 rounded-md tabular-nums">
                   #{i + 1}
                 </div>
               </div>
-              {/* Mini progress bar */}
               {candidates.length > 0 && (
-                <div className="mt-3 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <div className="mt-3 h-1 rounded-full" style={{ background: "var(--pipe-bar-track)" }}>
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${Math.round((stage.count / candidates.length) * 100)}%`,
-                      background: stage.color,
-                      opacity: 0.7,
+                      background: "currentColor",
+                      opacity: 0.45,
                     }}
                   />
                 </div>
@@ -324,23 +309,23 @@ export default function CandidatesPage() {
 
       {/* Gmail banner */}
       {showGmailBanner === "success" && (
-        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-300">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-700 dark:text-green-300">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             Gmail đã kết nối thành công! Bạn có thể quét hộp thư ngay bây giờ.
           </div>
-          <button onClick={() => setShowGmailBanner(null)} className="text-green-500/60 hover:text-green-300 transition-colors">
+          <button onClick={() => setShowGmailBanner(null)} className="text-green-500/60 hover:text-green-700 dark:hover:text-green-300 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
       {showGmailBanner === "error" && (
-        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-700 dark:text-red-300">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             Kết nối Gmail thất bại. Vui lòng thử lại.
           </div>
-          <button onClick={() => setShowGmailBanner(null)} className="text-red-500/60 hover:text-red-300 transition-colors">
+          <button onClick={() => setShowGmailBanner(null)} className="text-red-500/60 hover:text-red-700 dark:hover:text-red-300 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -348,19 +333,19 @@ export default function CandidatesPage() {
 
       {/* Gmail integration bar */}
       {gmailStatus === "disconnected" && (
-        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-zinc-800/60 border border-zinc-700/50">
+        <div className="gmail-bar flex items-center justify-between gap-4 p-4 rounded-xl">
           <div className="flex items-start gap-3">
-            <Mail className="w-5 h-5 text-zinc-400 shrink-0 mt-0.5" />
+            <Mail className="w-5 h-5 ats-text-muted shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-zinc-200">Kết nối Gmail để quét CV tự động</p>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-sm font-medium ats-text-h">Kết nối Gmail để quét CV tự động</p>
+              <p className="text-xs ats-text-muted mt-0.5">
                 Hệ thống sẽ đọc hộp thư, tìm email có đính kèm CV (PDF) và tạo ứng viên tự động.
               </p>
             </div>
           </div>
           <a
             href="/api/gmail/connect?return_to=/candidates"
-            className="shrink-0 px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-medium transition-colors whitespace-nowrap"
+            className="shrink-0 px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-slate-800 dark:text-white text-sm font-medium transition-colors whitespace-nowrap"
           >
             Kết nối Gmail
           </a>
@@ -368,20 +353,20 @@ export default function CandidatesPage() {
       )}
 
       {(gmailStatus === "connected_oauth" || gmailStatus === "connected_env") && (
-        <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-zinc-800/40 border border-zinc-700/40">
+        <div className="gmail-bar flex items-center justify-between gap-4 p-3.5 rounded-xl">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
-              <span className="text-sm text-zinc-300 font-medium">Gmail đã kết nối</span>
+              <span className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 shrink-0" />
+              <span className="text-sm ats-text-h font-medium">Gmail đã kết nối</span>
             </div>
             {gmailStatus === "connected_env"}
             {scanResult && (
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs ats-text-muted">
                 — Vừa quét: {scanResult.processed} email, tạo mới {scanResult.created} ứng viên
               </span>
             )}
             {scanError && (
-              <span className="text-xs text-red-400 flex items-center gap-1">
+              <span className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" /> {scanError}
               </span>
             )}
@@ -390,7 +375,7 @@ export default function CandidatesPage() {
             {gmailStatus === "connected_oauth" && (
               <a
                 href="/api/gmail/connect?return_to=/candidates"
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="text-xs ats-text-muted hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
               >
                 Kết nối lại
               </a>
@@ -410,31 +395,31 @@ export default function CandidatesPage() {
       {/* Filters */}
       <div className="glass-card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-52">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Tìm theo tên, email, vị trí..."
-            className="w-full pl-9 pr-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-lg text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50"
+            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
           />
         </div>
         <div className="flex items-center gap-1.5">
-          <Filter className="w-3.5 h-3.5 text-slate-500" />
+          <Filter className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white/[0.05] border border-white/[0.08] rounded-lg text-sm text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-500/50"
+            className="bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
           >
-            {STATUS_OPTIONS.map((o) => <option key={o} value={o} className="bg-slate-900">{o}</option>)}
+            {STATUS_OPTIONS.map((o) => <option key={o} value={o} className="bg-white dark:bg-slate-900">{o}</option>)}
           </select>
         </div>
         <select
           value={decisionFilter}
           onChange={(e) => setDecisionFilter(e.target.value)}
-          className="bg-white/[0.05] border border-white/[0.08] rounded-lg text-sm text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-500/50"
+          className="bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
         >
           {DECISION_OPTIONS.map((o) => (
-            <option key={o} value={o} className="bg-slate-900">
+            <option key={o} value={o} className="bg-white dark:bg-slate-900">
               {o === "Tất cả" ? "Quyết định: Tất cả" : o}
             </option>
           ))}
@@ -471,18 +456,18 @@ export default function CandidatesPage() {
         {loading ? (
           <div className="py-20 text-center">
             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-sm text-slate-500 mt-3">Đang tải dữ liệu...</p>
+            <p className="text-sm ats-text-muted mt-3">Đang tải dữ liệu...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center">
-            <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">Không tìm thấy ứng viên nào</p>
+            <Users className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-sm ats-text-muted">Không tìm thấy ứng viên nào</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
+                <tr className="border-b border-slate-200 dark:border-white/[0.06]">
                   <th className="pl-5 pr-2 py-3">
                     <input
                       type="checkbox"
@@ -491,28 +476,28 @@ export default function CandidatesPage() {
                       className="w-3.5 h-3.5 rounded accent-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Ứng viên</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Vị trí</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Trạng thái</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
-                    <button onClick={() => toggleSort("total_score")} className="flex items-center gap-1 hover:text-slate-300 transition-colors">
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Ứng viên</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Vị trí</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Trạng thái</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">
+                    <button onClick={() => toggleSort("total_score")} className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
                       Tổng điểm <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Job Fit</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Potential</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Cultural</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Quyết định</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">Độ tin cậy</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
-                    <button onClick={() => toggleSort("created_at")} className="flex items-center gap-1 hover:text-slate-300 transition-colors">
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Job Fit</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Potential</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Cultural</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Quyết định</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Độ tin cậy</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">
+                    <button onClick={() => toggleSort("created_at")} className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
                       Ngày <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
                   <th className="px-3 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
                 {filtered.map((c) => {
                   const ai = c.ai_score_result;
                   const decisionCfg = decisionConfig(ai?.final_decision);
@@ -521,7 +506,7 @@ export default function CandidatesPage() {
                   return (
                     <tr
                       key={c.id}
-                      className={`hover:bg-white/[0.02] transition-colors group ${isSelected ? "bg-indigo-500/[0.06]" : ""}`}
+                      className={`hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group ${isSelected ? "bg-indigo-50 dark:bg-indigo-500/[0.06]" : ""}`}
                     >
                       <td className="pl-5 pr-2 py-3">
                         <input
@@ -532,10 +517,10 @@ export default function CandidatesPage() {
                         />
                       </td>
                       <td className="px-3 py-3">
-                        <p className="font-medium text-white">{c.name}</p>
+                        <p className="font-medium text-slate-900 dark:text-white">{c.name}</p>
                         <p className="text-xs text-slate-500">{c.email}</p>
                       </td>
-                      <td className="px-3 py-3 text-slate-300 whitespace-nowrap text-xs">{c.jobs?.title ?? "—"}</td>
+                      <td className="px-3 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap text-xs">{c.jobs?.title ?? "—"}</td>
                       <td className="px-3 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${statusCfg.className}`}>
                           {statusCfg.label}
@@ -555,7 +540,7 @@ export default function CandidatesPage() {
                           {ai?.confidence_level ?? "—"}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-slate-500 text-xs whitespace-nowrap">
+                      <td className="px-3 py-3 ats-text-muted text-xs whitespace-nowrap">
                         {new Date(c.created_at).toLocaleDateString("vi-VN")}
                       </td>
                       <td className="px-3 py-3">

@@ -148,34 +148,27 @@ async function getDashboardData() {
 function decisionConfig(decision: string | undefined) {
   switch (decision) {
     case "STRONG HIRE":
-      return { label: "Strong Hire", cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" };
+      return { label: "Strong Hire", cls: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/20" };
     case "HIRE":
-      return { label: "Hire", cls: "bg-blue-500/15 text-blue-400 border-blue-500/20" };
+      return { label: "Hire", cls: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/20" };
     case "CONSIDER":
-      return { label: "Consider", cls: "bg-amber-500/15 text-amber-400 border-amber-500/20" };
+      return { label: "Consider", cls: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/20" };
     case "REJECT":
-      return { label: "Reject", cls: "bg-red-500/15 text-red-400 border-red-500/20" };
+      return { label: "Reject", cls: "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/20" };
     default:
-      return { label: "—", cls: "bg-slate-500/15 text-slate-400 border-slate-500/20" };
+      return { label: "—", cls: "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/20" };
   }
 }
 
 function statusConfig(status: string) {
   switch (status) {
-    case "Scored":
-      return { label: "Đã chấm điểm", cls: "bg-green-500/15 text-green-400" };
-    case "Scoring":
-      return { label: "Đang chấm...", cls: "bg-blue-500/15 text-blue-400" };
-    case "New":
-      return { label: "Mới", cls: "bg-slate-500/15 text-slate-400" };
-    case "Interviewing":
-      return { label: "Phỏng vấn", cls: "bg-purple-500/15 text-purple-400" };
-    case "Hired":
-      return { label: "Đã tuyển", cls: "bg-emerald-500/15 text-emerald-400" };
-    case "Rejected":
-      return { label: "Từ chối", cls: "bg-red-500/15 text-red-400" };
-    default:
-      return { label: status, cls: "bg-slate-500/15 text-slate-400" };
+    case "Scored":       return { label: "Đã chấm điểm", cls: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400" };
+    case "Scoring":      return { label: "Đang chấm...",  cls: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400" };
+    case "New":          return { label: "Mới",           cls: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400" };
+    case "Interviewing": return { label: "Phỏng vấn",     cls: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400" };
+    case "Hired":        return { label: "Đã tuyển",      cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" };
+    case "Rejected":     return { label: "Từ chối",       cls: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" };
+    default:             return { label: status,          cls: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400" };
   }
 }
 
@@ -231,7 +224,7 @@ function TrendChart({ days }: { days: { label: string; count: number }[] }) {
                 <div className="absolute inset-0 bg-white/5" />
               )}
             </div>
-            <span className="text-[9px]" style={{ color: isLast ? "#93c5fd" : "rgba(71,85,105,0.9)" }}>
+            <span className={`text-[9px] ${isLast ? "text-blue-400" : "ats-text-muted"}`}>
               {d.label}
             </span>
           </div>
@@ -300,33 +293,22 @@ export default async function DashboardPage() {
       {/* ── Page header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-bold ats-text-h tracking-tight">
             Recruiting Operations
           </h1>
-          <p className="text-sm mt-1" style={{ color: "rgba(100,116,139,0.9)" }}>
+          <p className="text-sm mt-1 ats-text-muted">
             Tổng quan hệ thống tuyển dụng AI — cập nhật realtime
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
-            style={{
-              background: "rgba(37,99,235,0.10)",
-              border: "1px solid rgba(37,99,235,0.2)",
-              color: "#93c5fd",
-            }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 border border-blue-200 text-blue-600 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
             Live
           </div>
           <Link
             href="/cv-analyzer"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
-            style={{
-              background: "linear-gradient(135deg, #1d4ed8, #2563eb)",
-              boxShadow: "0 2px 8px rgba(37,99,235,0.35)",
-            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ats-btn-primary"
           >
             Phân tích CV mới
           </Link>
@@ -348,8 +330,8 @@ export default async function DashboardPage() {
                 style={{ color: "#60a5fa" }}
               />
             </div>
-            <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
-            <p className="text-xs font-medium mt-0.5" style={{ color: "rgba(148,163,184,0.8)" }}>
+            <p className="text-2xl font-bold ats-text-h tabular-nums">{value}</p>
+            <p className="text-xs font-medium mt-0.5 ats-text-body">
               {label}
             </p>
             <p className="text-[11px] mt-1.5 font-medium badge-up px-1.5 py-0.5 rounded-md inline-block">
@@ -365,21 +347,21 @@ export default async function DashboardPage() {
         <div className="glass-card p-5 lg:col-span-3">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <BarChart2 className="w-4 h-4" style={{ color: "#60a5fa" }} />
-              <h2 className="text-sm font-semibold text-white">Xu hướng ứng viên</h2>
+              <BarChart2 className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+              <h2 className="text-sm font-semibold ats-text-h">Xu hướng ứng viên</h2>
             </div>
-            <span className="text-xs" style={{ color: "rgba(100,116,139,0.8)" }}>7 ngày qua</span>
+            <span className="text-xs ats-text-muted">7 ngày qua</span>
           </div>
-          <p className="text-xs mb-3" style={{ color: "rgba(100,116,139,0.7)" }}>
+          <p className="text-xs mb-3 ats-text-muted">
             Số ứng viên nộp hồ sơ mỗi ngày trong tuần qua
           </p>
           <TrendChart days={trendDays} />
-          <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(100,116,139,0.8)" }}>
+          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.05]">
+            <div className="flex items-center gap-1.5 text-xs ats-text-muted">
               <div className="w-3 h-2 rounded-sm" style={{ background: "linear-gradient(90deg, #3b82f6, #1d4ed8)" }} />
               Hôm nay
             </div>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(100,116,139,0.8)" }}>
+            <div className="flex items-center gap-1.5 text-xs ats-text-muted">
               <div className="w-3 h-2 rounded-sm" style={{ background: "rgba(37,99,235,0.35)" }} />
               Ngày khác
             </div>
@@ -388,22 +370,12 @@ export default async function DashboardPage() {
 
         {/* Today's interviews (2/5 width) */}
         <div className="glass-card lg:col-span-2 flex flex-col">
-          <div
-            className="flex items-center justify-between px-5 py-4"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-          >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/[0.05]">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" style={{ color: "#60a5fa" }} />
-              <h2 className="text-sm font-semibold text-white">Phỏng vấn hôm nay</h2>
+              <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+              <h2 className="text-sm font-semibold ats-text-h">Phỏng vấn hôm nay</h2>
             </div>
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-medium"
-              style={{
-                background: "rgba(37,99,235,0.12)",
-                color: "#93c5fd",
-                border: "1px solid rgba(37,99,235,0.22)",
-              }}
-            >
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/12 dark:text-blue-300 dark:border-blue-500/22">
               {todayInterviews.length}
             </span>
           </div>
@@ -411,20 +383,14 @@ export default async function DashboardPage() {
           <div className="flex-1 overflow-y-auto custom-scroll">
             {todayInterviews.length === 0 ? (
               <div className="py-10 text-center">
-                <Calendar className="w-7 h-7 mx-auto mb-2" style={{ color: "rgba(71,85,105,0.8)" }} />
-                <p className="text-sm" style={{ color: "rgba(100,116,139,0.7)" }}>
-                  Không có lịch hôm nay
-                </p>
-                <Link
-                  href="/interviews"
-                  className="mt-3 inline-block text-xs"
-                  style={{ color: "#60a5fa" }}
-                >
+                <Calendar className="w-7 h-7 mx-auto mb-2 text-slate-400 dark:text-slate-600" />
+                <p className="text-sm ats-text-muted">Không có lịch hôm nay</p>
+                <Link href="/interviews" className="mt-3 inline-block text-xs text-blue-600 dark:text-blue-400">
                   Xem tất cả lịch →
                 </Link>
               </div>
             ) : (
-              <ul className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+              <ul className="divide-y divide-slate-100 dark:divide-white/[0.04]">
                 {todayInterviews.map((iv) => {
                   const time = new Date(iv.start_time).toLocaleTimeString("vi-VN", {
                     hour: "2-digit",
@@ -436,22 +402,14 @@ export default async function DashboardPage() {
                   });
                   return (
                     <li key={iv.id} className="flex items-start gap-3 px-5 py-3">
-                      <div
-                        className="mt-0.5 text-[10px] font-bold tabular-nums px-1.5 py-1 rounded-md shrink-0"
-                        style={{
-                          background: "rgba(37,99,235,0.12)",
-                          color: "#93c5fd",
-                          minWidth: "44px",
-                          textAlign: "center",
-                        }}
-                      >
+                      <div className="mt-0.5 text-[10px] font-bold tabular-nums px-1.5 py-1 rounded-md shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-500/12 dark:text-blue-300" style={{ minWidth: "44px", textAlign: "center" }}>
                         {time}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
+                        <p className="text-sm font-medium ats-text-h truncate">
                           {iv.candidates?.name ?? "—"}
                         </p>
-                        <p className="text-xs truncate mt-0.5" style={{ color: "rgba(100,116,139,0.8)" }}>
+                        <p className="text-xs truncate mt-0.5 ats-text-muted">
                           {iv.candidates?.jobs?.title ?? "Chưa rõ vị trí"} · đến {endTime}
                         </p>
                         {iv.meet_link && (
@@ -459,8 +417,7 @@ export default async function DashboardPage() {
                             href={iv.meet_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium"
-                            style={{ color: "#60a5fa" }}
+                            className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-blue-600 dark:text-blue-400"
                           >
                             <Video className="w-3 h-3" /> Meet link
                           </a>
@@ -473,17 +430,10 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          <div
-            className="px-5 py-2.5"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
-          >
+          <div className="px-5 py-2.5 border-t border-slate-200 dark:border-white/[0.05]">
             <Link
               href="/interviews"
-              className="flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-lg w-full transition-colors"
-              style={{
-                color: "#93c5fd",
-                background: "rgba(37,99,235,0.07)",
-              }}
+              className="flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-lg w-full transition-colors text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/7 hover:bg-blue-100 dark:hover:bg-blue-500/12"
             >
               Quản lý lịch phỏng vấn <ArrowRight className="w-3 h-3" />
             </Link>
@@ -493,107 +443,75 @@ export default async function DashboardPage() {
 
       {/* ── Recent candidates table ── */}
       <div className="glass-card overflow-hidden">
-        <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-        >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/[0.05]">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" style={{ color: "#60a5fa" }} />
-            <h2 className="text-sm font-semibold text-white">Ứng viên gần đây</h2>
+            <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+            <h2 className="text-sm font-semibold ats-text-h">Ứng viên gần đây</h2>
           </div>
-          <Link
-            href="/candidates"
-            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-            style={{ color: "#60a5fa" }}
-          >
+          <Link href="/candidates" className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 transition-colors">
             Xem tất cả <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
 
         {recentCandidates.length === 0 ? (
           <div className="py-16 text-center">
-            <Users className="w-8 h-8 mx-auto mb-2" style={{ color: "rgba(71,85,105,0.7)" }} />
-            <p className="text-sm" style={{ color: "rgba(100,116,139,0.7)" }}>
-              Chưa có ứng viên nào
-            </p>
+            <Users className="w-8 h-8 mx-auto mb-2 text-slate-400 dark:text-slate-600" />
+            <p className="text-sm ats-text-muted">Chưa có ứng viên nào</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                  {["Ứng viên", "Vị trí", "Trạng thái", "Tổng điểm", "Quyết định AI", "Ngày nộp"].map(
-                    (col) => (
-                      <th
-                        key={col}
-                        className="px-5 py-3 text-left text-xs font-semibold whitespace-nowrap uppercase tracking-wide"
-                        style={{ color: "rgba(71,85,105,0.9)" }}
-                      >
-                        {col}
-                      </th>
-                    )
-                  )}
+                <tr className="border-b border-slate-200 dark:border-white/[0.05]">
+                  {["Ứng viên", "Vị trí", "Trạng thái", "Tổng điểm", "Quyết định AI", "Ngày nộp"].map((col) => (
+                    <th key={col} className="px-5 py-3 text-left text-xs font-semibold whitespace-nowrap uppercase tracking-wide ats-text-muted">
+                      {col}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.03]">
                 {recentCandidates.map((c) => {
                   const decision = c.ai_score_result?.final_decision;
                   const dcfg = decisionConfig(decision);
                   const scfg = statusConfig(c.status);
+                  const scoreCls = c.total_score != null
+                    ? c.total_score >= 7 ? "ats-score-good" : c.total_score >= 5 ? "ats-score-mid" : "ats-score-low"
+                    : "";
                   return (
-                    <tr
-                      key={c.id}
-                      className="transition-colors hover:bg-white/[0.02]"
-                      style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}
-                    >
+                    <tr key={c.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.02]">
                       <td className="px-5 py-3">
                         <Link href={`/candidates/${c.id}`} className="group">
-                          <p className="font-medium text-white group-hover:text-blue-300 transition-colors">
+                          <p className="font-medium ats-text-h group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
                             {c.name}
                           </p>
-                          <p className="text-xs mt-0.5" style={{ color: "rgba(100,116,139,0.7)" }}>
-                            {c.email}
-                          </p>
+                          <p className="text-xs mt-0.5 ats-text-muted">{c.email}</p>
                         </Link>
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap" style={{ color: "rgba(203,213,225,0.9)" }}>
+                      <td className="px-5 py-3 whitespace-nowrap text-slate-600 dark:text-slate-300">
                         {c.jobs?.title ?? "—"}
                       </td>
                       <td className="px-5 py-3">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${scfg.cls}`}
-                        >
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${scfg.cls}`}>
                           {scfg.label}
                         </span>
                       </td>
                       <td className="px-5 py-3">
                         {c.total_score != null ? (
-                          <span
-                            className={`font-bold tabular-nums ${
-                              c.total_score >= 7
-                                ? "text-emerald-400"
-                                : c.total_score >= 5
-                                ? "text-amber-400"
-                                : "text-red-400"
-                            }`}
-                          >
+                          <span className={`tabular-nums ${scoreCls}`}>
                             {c.total_score.toFixed(1)}
-                            <span className="text-xs font-normal" style={{ color: "rgba(100,116,139,0.7)" }}>
-                              /10
-                            </span>
+                            <span className="text-xs font-normal text-slate-400 dark:text-slate-600">/10</span>
                           </span>
                         ) : (
-                          <span style={{ color: "rgba(71,85,105,0.8)" }}>—</span>
+                          <span className="text-slate-400 dark:text-slate-600">—</span>
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${dcfg.cls}`}
-                        >
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${dcfg.cls}`}>
                           {dcfg.label}
                         </span>
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap text-xs" style={{ color: "rgba(71,85,105,0.9)" }}>
+                      <td className="px-5 py-3 whitespace-nowrap text-xs ats-text-muted">
                         {new Date(c.created_at).toLocaleDateString("vi-VN")}
                       </td>
                     </tr>
@@ -607,15 +525,12 @@ export default async function DashboardPage() {
 
       {/* ── Activity feed ── */}
       <div className="glass-card overflow-hidden">
-        <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-        >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/[0.05]">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4" style={{ color: "#60a5fa" }} />
-            <h2 className="text-sm font-semibold text-white">Hoạt động gần đây</h2>
+            <Activity className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+            <h2 className="text-sm font-semibold ats-text-h">Hoạt động gần đây</h2>
           </div>
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(100,116,139,0.7)" }}>
+          <div className="flex items-center gap-1.5 text-xs ats-text-muted">
             <Target className="w-3 h-3" />
             Audit log
           </div>
@@ -623,31 +538,22 @@ export default async function DashboardPage() {
 
         {auditLogs.length === 0 ? (
           <div className="py-10 text-center">
-            <p className="text-sm" style={{ color: "rgba(100,116,139,0.7)" }}>
-              Chưa có hoạt động nào được ghi lại
-            </p>
+            <p className="text-sm ats-text-muted">Chưa có hoạt động nào được ghi lại</p>
           </div>
         ) : (
-          <ul>
-            {auditLogs.map((log, i) => (
-              <li
-                key={log.id}
-                className="flex items-start gap-3 px-5 py-3 transition-colors"
-                style={{
-                  borderBottom:
-                    i < auditLogs.length - 1 ? "1px solid rgba(255,255,255,0.03)" : undefined,
-                }}
-              >
+          <ul className="divide-y divide-slate-100 dark:divide-white/[0.03]">
+            {auditLogs.map((log) => (
+              <li key={log.id} className="flex items-start gap-3 px-5 py-3 transition-colors">
                 <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${auditDot(log.action)}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
+                  <p className="text-sm font-medium ats-text-h truncate">
                     {log.entity_name ?? log.entity_id}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: "rgba(100,116,139,0.8)" }}>
+                  <p className="text-xs mt-0.5 ats-text-muted">
                     {auditActionLabel(log.action, log.details)}
                   </p>
                 </div>
-                <time className="text-xs shrink-0 mt-0.5 whitespace-nowrap" style={{ color: "rgba(71,85,105,0.9)" }}>
+                <time className="text-xs shrink-0 mt-0.5 whitespace-nowrap ats-text-muted">
                   {new Date(log.created_at).toLocaleString("vi-VN", {
                     day: "2-digit",
                     month: "2-digit",

@@ -367,12 +367,12 @@ function AppearancePanel() {
 
   const handleThemeChange = (t: "light" | "dark" | "system") => {
     setTheme(t);
-    applyTheme(t);
   };
 
   const handleSave = () => {
     localStorage.setItem("ats_theme", theme);
     localStorage.setItem("ats_lang", lang);
+    applyTheme(theme);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };

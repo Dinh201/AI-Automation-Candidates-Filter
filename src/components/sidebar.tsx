@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -76,6 +76,9 @@ type UserProfile = {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const prevPathRef = useRef<string>("/");
+  const isSettings = pathname === "/settings";
   const [profileHover, setProfileHover] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     name: "...",
@@ -83,6 +86,21 @@ export function Sidebar() {
     initials: "··",
   });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Ghi nhớ trang trước khi vào settings
+  useEffect(() => {
+    if (pathname !== "/settings") {
+      prevPathRef.current = pathname;
+    }
+  }, [pathname]);
+
+  function handleSettingsToggle() {
+    if (isSettings) {
+      router.push(prevPathRef.current);
+    } else {
+      router.push("/settings");
+    }
+  }
 
   useEffect(() => {
     setAvatarUrl(localStorage.getItem("ats_avatar"));
@@ -144,14 +162,10 @@ export function Sidebar() {
       {/* ── Brand / Logo ── */}
       <div className="px-4 pt-5 pb-4" style={{ borderBottom: "1px solid var(--sb-border)" }}>
         <div className="flex items-center gap-3">
-          {/* Star logo */}
-          <div style={{
-            borderRadius: "50%",
-            boxShadow: "0 0 18px rgba(0,200,255,0.28), 0 0 6px rgba(0,180,230,0.18)",
-            flexShrink: 0,
-          }}>
-            <StarLogo size={36} />
-          </div>
+          {/* Vacons logo */}
+          <Link href="/" aria-label="Dashboard">
+            <StarLogo size={44} />
+          </Link>
           <div>
             <p className="font-bold text-sm leading-none" style={{
               letterSpacing: "0.01em",
@@ -185,9 +199,9 @@ export function Sidebar() {
                     style={
                       active
                         ? {
-                            background: "rgba(0,185,230,0.10)",
-                            borderLeft: "2px solid #06b6d4",
-                            color: "#67e8f9",
+                            background: "var(--sb-nav-active-bg)",
+                            borderLeft: "2px solid var(--sb-nav-active-border)",
+                            color: "var(--sb-nav-active-text)",
                             paddingLeft: "10px",
                           }
                         : {
@@ -198,11 +212,11 @@ export function Sidebar() {
                   >
                     <Icon
                       className="w-4 h-4 shrink-0 transition-colors"
-                      style={{ color: active ? "#22d3ee" : "rgba(100,116,139,1)" }}
+                      style={{ color: active ? "var(--sb-nav-active-icon)" : "rgba(100,116,139,1)" }}
                     />
                     <span className="flex-1">{label}</span>
                     {active && (
-                      <ChevronRight className="w-3 h-3 opacity-50" style={{ color: "#22d3ee" }} />
+                      <ChevronRight className="w-3 h-3 opacity-50" style={{ color: "var(--sb-nav-active-icon)" }} />
                     )}
                   </Link>
                 );
@@ -217,15 +231,33 @@ export function Sidebar() {
         {/* Keyframe CSS for avatar animation */}
         <style dangerouslySetInnerHTML={{ __html: AVATAR_CSS }} />
 
-        {/* Settings link */}
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
-          style={{ color: "var(--sb-settings-text)" }}
+        {/* Settings toggle */}
+        <button
+          onClick={handleSettingsToggle}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
+          style={
+            isSettings
+              ? {
+                  background: "var(--sb-nav-active-bg)",
+                  borderLeft: "2px solid var(--sb-nav-active-border)",
+                  color: "var(--sb-nav-active-text)",
+                  paddingLeft: "10px",
+                }
+              : {
+                  color: "var(--sb-settings-text)",
+                  borderLeft: "2px solid transparent",
+                }
+          }
         >
-          <Settings className="w-4 h-4" />
-          <span>Cài đặt</span>
-        </Link>
+          <Settings
+            className="w-4 h-4 shrink-0 transition-colors"
+            style={{ color: isSettings ? "var(--sb-nav-active-icon)" : "rgba(100,116,139,1)" }}
+          />
+          <span className="flex-1 text-left">Cài đặt</span>
+          {isSettings && (
+            <ChevronRight className="w-3 h-3 opacity-50" style={{ color: "var(--sb-nav-active-icon)" }} />
+          )}
+        </button>
 
         {/* Avatar Card Flip + Glow */}
         <div
