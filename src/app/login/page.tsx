@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
@@ -136,17 +136,17 @@ function FluidCanvas() {
   );
 }
 
-/* ── Login page ──────────────────────────────────────────────── */
-export default function LoginPage() {
+/* ── Form panel — isolated so useSearchParams can be Suspense-wrapped ── */
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
 
-  const [email, setEmail]     = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [showPw, setShowPw]   = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
+  const [showPw, setShowPw]     = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
 
   const supabase = createSupabaseBrowser();
 
@@ -181,6 +181,150 @@ export default function LoginPage() {
   }
 
   return (
+    <div style={{
+      background: "rgba(4,8,22,0.62)",
+      backdropFilter: "blur(36px)",
+      WebkitBackdropFilter: "blur(36px)",
+      borderLeft: "1px solid rgba(255,255,255,0.08)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "52px 44px",
+      position: "relative",
+    }}>
+      {/* Logo */}
+      <div style={{
+        position: "absolute", top: 22, left: 0, right: 0,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+      }}>
+        <div style={{ borderRadius: "50%", boxShadow: "0 0 14px rgba(0,200,255,0.22)", flexShrink: 0 }}>
+          <StarLogo size={30} />
+        </div>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.01em" }}>
+          ATS Internal
+        </span>
+      </div>
+
+      {/* Form body */}
+      <div style={{ width: "100%", maxWidth: 300 }}>
+        <h1 style={{
+          fontSize: 26, fontWeight: 700, color: "#ffffff",
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          letterSpacing: "-0.02em", textAlign: "center", margin: "0 0 8px",
+        }}>
+          Welcome Back
+        </h1>
+        <p style={{ textAlign: "center", color: "rgba(255,255,255,0.45)", fontSize: 13, margin: "0 0 28px" }}>
+          Nhập thông tin để truy cập hệ thống
+        </p>
+
+        {error && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: 8, padding: "10px 12px", marginBottom: 16,
+          }}>
+            <AlertCircle size={14} style={{ color: "#f87171", flexShrink: 0 }} />
+            <p style={{ color: "#fca5a5", fontSize: 13, margin: 0 }}>{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
+              Email
+            </label>
+            <input
+              className="lp-input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+              disabled={loading}
+              style={{
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)",
+                borderRadius: 8, padding: "10px 14px", fontSize: 14, color: "#ffffff",
+                outline: "none", transition: "border-color 0.15s",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "#06b6d4")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.14)")}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
+              Password
+            </label>
+            <div style={{ position: "relative" }}>
+              <input
+                className="lp-input"
+                type={showPw ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                disabled={loading}
+                style={{
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)",
+                  borderRadius: 8, padding: "10px 40px 10px 14px", fontSize: 14, color: "#ffffff",
+                  outline: "none", transition: "border-color 0.15s",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#06b6d4")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.14)")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw(!showPw)}
+                style={{
+                  position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                  background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+                  cursor: "pointer", padding: 4, display: "flex",
+                }}
+              >
+                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -4 }}>
+            <button
+              type="button"
+              style={{ background: "none", border: "none", fontSize: 13, color: "rgba(255,255,255,0.4)", cursor: "pointer", padding: 0 }}
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
+
+          <button
+            className="lp-btn"
+            type="submit"
+            disabled={loading}
+            style={{
+              display: "block", width: "100%", padding: "11px",
+              background: loading ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8,
+              color: "white", fontSize: 14, fontWeight: 600,
+              cursor: loading ? "not-allowed" : "pointer",
+              transition: "background 0.15s", marginTop: 4,
+            }}
+          >
+            {loading ? "Đang đăng nhập…" : "Sign In"}
+          </button>
+        </form>
+
+        <p style={{ textAlign: "center", marginTop: 32, color: "rgba(255,255,255,0.25)", fontSize: 11 }}>
+          ATS Internal · v0.1.0 MVP Build
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Login page ──────────────────────────────────────────────── */
+export default function LoginPage() {
+  return (
     <>
       <style>{`
         .lp-left { display: block; }
@@ -193,11 +337,10 @@ export default function LoginPage() {
         .lp-btn:hover:not(:disabled) { background: rgba(255,255,255,0.18) !important; }
       `}</style>
 
-      {/* ── Full-page animated background (single canvas, covers both panels) ── */}
+      {/* ── Full-page animated background ── */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
         <FluidCanvas />
       </div>
-      {/* Subtle dark vignette over the whole page */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 1,
         background: "radial-gradient(ellipse at 60% 50%, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.55) 100%)",
@@ -207,45 +350,31 @@ export default function LoginPage() {
       <div style={{
         position: "relative", zIndex: 2,
         minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: "flex", alignItems: "center", justifyContent: "center",
         padding: 20,
       }}>
-        {/* Card */}
         <div
           className="lp-card"
           style={{
-            width: "100%",
-            maxWidth: 920,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            minHeight: 560,
-            borderRadius: 20,
-            overflow: "hidden",
+            width: "100%", maxWidth: 920,
+            display: "grid", gridTemplateColumns: "1fr 1fr",
+            minHeight: 560, borderRadius: 20, overflow: "hidden",
             border: "1px solid rgba(255,255,255,0.14)",
             boxShadow: "0 40px 100px rgba(0,0,0,0.8)",
           }}
         >
           {/* ── LEFT: transparent — background canvas shows through ── */}
-          <div
-            className="lp-left"
-            style={{ position: "relative", overflow: "hidden" }}
-          >
-            {/* Gradient overlay for text legibility */}
+          <div className="lp-left" style={{ position: "relative", overflow: "hidden" }}>
             <div style={{
               position: "absolute", inset: 0,
               background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.12) 100%)",
               zIndex: 1,
             }} />
-
-            {/* Text content */}
             <div style={{
               position: "absolute", inset: 0, zIndex: 2,
               padding: "28px 32px",
               display: "flex", flexDirection: "column", justifyContent: "space-between",
             }}>
-              {/* Top badge */}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{
                   fontSize: 10, fontWeight: 700,
@@ -256,220 +385,33 @@ export default function LoginPage() {
                 </span>
                 <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
               </div>
-
-              {/* Bottom headline */}
               <div>
                 <h2 style={{
-                  fontSize: 40,
-                  fontWeight: 700,
-                  lineHeight: 1.12,
-                  color: "#ffffff",
+                  fontSize: 40, fontWeight: 700, lineHeight: 1.12, color: "#ffffff",
                   fontFamily: "Georgia, 'Times New Roman', serif",
-                  margin: "0 0 14px",
-                  textShadow: "0 2px 28px rgba(0,0,0,0.6)",
+                  margin: "0 0 14px", textShadow: "0 2px 28px rgba(0,0,0,0.6)",
                 }}>
                   Tuyển đúng người,<br />
                   Đúng vị trí,<br />
                   Đúng thời điểm
                 </h2>
-                <p style={{
-                  fontSize: 13,
-                  color: "rgba(255,255,255,0.58)",
-                  lineHeight: 1.65,
-                  maxWidth: 260,
-                  margin: 0,
-                }}>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.58)", lineHeight: 1.65, maxWidth: 260, margin: 0 }}>
                   Hệ thống ATS nội bộ giúp đội ngũ HR tuyển dụng hiệu quả và chính xác hơn.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* ── RIGHT: frosted glass — canvas background shows through ── */}
-          <div style={{
-            background: "rgba(4,8,22,0.62)",
-            backdropFilter: "blur(36px)",
-            WebkitBackdropFilter: "blur(36px)",
-            borderLeft: "1px solid rgba(255,255,255,0.08)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "52px 44px",
-            position: "relative",
-          }}>
-            {/* Logo */}
+          {/* ── RIGHT: frosted glass — Suspense wraps useSearchParams ── */}
+          <Suspense fallback={
             <div style={{
-              position: "absolute", top: 22, left: 0, right: 0,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
-            }}>
-              <div style={{
-                borderRadius: "50%",
-                boxShadow: "0 0 14px rgba(0,200,255,0.22)",
-                flexShrink: 0,
-              }}>
-                <StarLogo size={30} />
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.01em" }}>
-                ATS Internal
-              </span>
-            </div>
-
-            {/* Form body */}
-            <div style={{ width: "100%", maxWidth: 300 }}>
-              <h1 style={{
-                fontSize: 26,
-                fontWeight: 700,
-                color: "#ffffff",
-                fontFamily: "Georgia, 'Times New Roman', serif",
-                letterSpacing: "-0.02em",
-                textAlign: "center",
-                margin: "0 0 8px",
-              }}>
-                Welcome Back
-              </h1>
-              <p style={{
-                textAlign: "center",
-                color: "rgba(255,255,255,0.45)",
-                fontSize: 13,
-                margin: "0 0 28px",
-              }}>
-                Nhập thông tin để truy cập hệ thống
-              </p>
-
-              {/* Error */}
-              {error && (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 8, padding: "10px 12px", marginBottom: 16,
-                }}>
-                  <AlertCircle size={14} style={{ color: "#f87171", flexShrink: 0 }} />
-                  <p style={{ color: "#fca5a5", fontSize: 13, margin: 0 }}>{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {/* Email */}
-                <div>
-                  <label style={{
-                    display: "block", fontSize: 13,
-                    fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 6,
-                  }}>
-                    Email
-                  </label>
-                  <input
-                    className="lp-input"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                    disabled={loading}
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.14)",
-                      borderRadius: 8,
-                      padding: "10px 14px",
-                      fontSize: 14,
-                      color: "#ffffff",
-                      outline: "none",
-                      transition: "border-color 0.15s",
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = "#06b6d4")}
-                    onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.14)")}
-                  />
-                </div>
-
-                {/* Password */}
-                <div>
-                  <label style={{
-                    display: "block", fontSize: 13,
-                    fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 6,
-                  }}>
-                    Password
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      className="lp-input"
-                      type={showPw ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      required
-                      disabled={loading}
-                      style={{
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: 8,
-                        padding: "10px 40px 10px 14px",
-                        fontSize: 14,
-                        color: "#ffffff",
-                        outline: "none",
-                        transition: "border-color 0.15s",
-                      }}
-                      onFocus={(e) => (e.target.style.borderColor = "#06b6d4")}
-                      onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.14)")}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPw(!showPw)}
-                      style={{
-                        position: "absolute", right: 10, top: "50%",
-                        transform: "translateY(-50%)",
-                        background: "none", border: "none",
-                        color: "rgba(255,255,255,0.4)", cursor: "pointer",
-                        padding: 4, display: "flex",
-                      }}
-                    >
-                      {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Forgot password */}
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -4 }}>
-                  <button
-                    type="button"
-                    style={{
-                      background: "none", border: "none",
-                      fontSize: 13, color: "rgba(255,255,255,0.4)",
-                      cursor: "pointer", padding: 0,
-                    }}
-                  >
-                    Quên mật khẩu?
-                  </button>
-                </div>
-
-                {/* Sign in */}
-                <button
-                  className="lp-btn"
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    display: "block", width: "100%",
-                    padding: "11px",
-                    background: loading ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.12)",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    borderRadius: 8,
-                    color: "white", fontSize: 14, fontWeight: 600,
-                    cursor: loading ? "not-allowed" : "pointer",
-                    transition: "background 0.15s",
-                    marginTop: 4,
-                  }}
-                >
-                  {loading ? "Đang đăng nhập…" : "Sign In"}
-                </button>
-              </form>
-
-              <p style={{
-                textAlign: "center", marginTop: 32,
-                color: "rgba(255,255,255,0.25)", fontSize: 11,
-              }}>
-                ATS Internal · v0.1.0 MVP Build
-              </p>
-            </div>
-          </div>
+              background: "rgba(4,8,22,0.62)",
+              backdropFilter: "blur(36px)",
+              WebkitBackdropFilter: "blur(36px)",
+            }} />
+          }>
+            <LoginForm />
+          </Suspense>
         </div>
       </div>
     </>
