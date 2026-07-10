@@ -83,14 +83,57 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* ATS custom tokens */
-  --ats-bg: #050c18;
-  --ats-surface: #0c1830;
-  --ats-surface-2: #111f38;
-  --ats-border: rgba(255, 255, 255, 0.07);
+  color-scheme: light;
+
+  /* ATS custom tokens – light */
+  --ats-bg: #f0f4f8;
+  --ats-surface: #ffffff;
+  --ats-surface-2: #f8fafc;
+  --ats-border: rgba(0, 0, 0, 0.08);
   --ats-accent: #2563eb;
   --ats-accent-muted: rgba(37, 99, 235, 0.12);
   --ats-accent-border: rgba(37, 99, 235, 0.25);
+
+  /* Settings page tokens – light */
+  --stg-page-bg: linear-gradient(180deg, #f1f5f9 0%, #e8eef6 100%);
+  --stg-nav-border: rgba(0,0,0,0.07);
+  --stg-card-bg: rgba(0,0,0,0.03);
+  --stg-card-border: rgba(0,0,0,0.08);
+  --stg-text-h: #0f172a;
+  --stg-text-body: #1e293b;
+  --stg-text-label: #64748b;
+  --stg-text-dim: #64748b;
+  --stg-text-hint: #94a3b8;
+  --stg-text-disabled: #94a3b8;
+  --stg-input-bg: rgba(0,0,0,0.04);
+  --stg-input-border: rgba(0,0,0,0.1);
+  --stg-input-color: #0f172a;
+  --stg-input-disabled-color: #94a3b8;
+  --stg-divider: rgba(0,0,0,0.06);
+  --stg-row-icon-bg: rgba(6,182,212,0.08);
+  --stg-row-icon-border: rgba(6,182,212,0.15);
+  --stg-btn-bg: rgba(0,0,0,0.04);
+  --stg-btn-border: rgba(0,0,0,0.1);
+  --stg-scroll-thumb: rgba(0,0,0,0.12);
+  --stg-tab-hover: rgba(0,0,0,0.04);
+  --stg-nav-section-label: rgba(51,65,85,0.6);
+
+  /* Sidebar tokens – light */
+  --sb-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  --sb-border: rgba(0,0,0,0.07);
+  --sb-brand: #0f172a;
+  --sb-brand-sub: #64748b;
+  --sb-section-label: rgba(100,116,139,0.7);
+  --sb-nav-text: rgba(51,65,85,0.9);
+  --sb-settings-text: rgba(51,65,85,0.85);
+  --sb-profile-bg: rgba(0,0,0,0.03);
+  --sb-profile-border: rgba(0,0,0,0.07);
+  --sb-profile-name: #0f172a;
+  --sb-profile-role: rgba(71,85,105,0.8);
+  --sb-avatar-inner: #dbeafe;
+  --sb-avatar-text: #1d4ed8;
+  --sb-back-name: #4f46e5;
+  --sb-version: rgba(71,85,105,0.5);
 }
 
 .dark {
@@ -125,6 +168,55 @@
   --sidebar-accent-foreground: oklch(0.96 0 0);
   --sidebar-border: oklch(1 0 0 / 7%);
   --sidebar-ring: oklch(0.55 0.22 264);
+
+  color-scheme: dark;
+
+  /* ATS custom tokens – dark */
+  --ats-bg: #050c18;
+  --ats-surface: #0c1830;
+  --ats-surface-2: #111f38;
+  --ats-border: rgba(255,255,255,0.07);
+
+  /* Settings page tokens – dark */
+  --stg-page-bg: linear-gradient(180deg, #070d1f 0%, #060b18 100%);
+  --stg-nav-border: rgba(255,255,255,0.05);
+  --stg-card-bg: rgba(255,255,255,0.025);
+  --stg-card-border: rgba(255,255,255,0.065);
+  --stg-text-h: #f8fafc;
+  --stg-text-body: #e2e8f0;
+  --stg-text-label: #475569;
+  --stg-text-dim: #475569;
+  --stg-text-hint: #334155;
+  --stg-text-disabled: #334155;
+  --stg-input-bg: rgba(255,255,255,0.04);
+  --stg-input-border: rgba(255,255,255,0.08);
+  --stg-input-color: #e2e8f0;
+  --stg-input-disabled-color: #334155;
+  --stg-divider: rgba(255,255,255,0.05);
+  --stg-row-icon-bg: rgba(6,182,212,0.07);
+  --stg-row-icon-border: rgba(6,182,212,0.12);
+  --stg-btn-bg: rgba(255,255,255,0.025);
+  --stg-btn-border: rgba(255,255,255,0.07);
+  --stg-scroll-thumb: rgba(255,255,255,0.08);
+  --stg-tab-hover: rgba(255,255,255,0.04);
+  --stg-nav-section-label: rgba(100,116,139,0.55);
+
+  /* Sidebar tokens – dark */
+  --sb-bg: linear-gradient(180deg, #060d1e 0%, #060b19 100%);
+  --sb-border: rgba(255,255,255,0.06);
+  --sb-brand: #FFFFFF;
+  --sb-brand-sub: #94A3B8;
+  --sb-section-label: rgba(100,116,139,0.8);
+  --sb-nav-text: rgba(148,163,184,0.85);
+  --sb-settings-text: rgba(100,116,139,0.85);
+  --sb-profile-bg: rgba(255,255,255,0.035);
+  --sb-profile-border: rgba(255,255,255,0.07);
+  --sb-profile-name: #f1f5f9;
+  --sb-profile-role: rgba(148,163,184,0.72);
+  --sb-avatar-inner: #0c1529;
+  --sb-avatar-text: #93c5fd;
+  --sb-back-name: #a5b4fc;
+  --sb-version: rgba(71,85,105,0.7);
 }
 
 @layer base {
