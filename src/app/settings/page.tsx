@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  User, Palette, Bell, Plug, Brain, CalendarDays, Mail,
-  Sun, Moon, Monitor, Key, Clock,
-  Eye, EyeOff, Save, Copy, RefreshCw, Plus, Trash2, Check,
+  User, Palette, Bell, Brain, CalendarDays, Mail,
+  Sun, Moon, Monitor, Clock,
+  Eye, EyeOff, Save, Plus, Check,
   Lock, Link2, X, Upload,
 } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
@@ -629,110 +629,6 @@ function NotificationsPanel() {
   );
 }
 
-type ApiKey = { id: string; name: string; key: string; active: boolean };
-type Webhook = { id: string; name: string; url: string; active: boolean };
-
-function IntegrationsPanel() {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([
-    { id: "1", name: "Make.com Integration", key: "mk_live_••••••••4f2a", active: true },
-    { id: "2", name: "OpenAI Resume Parser", key: "sk-••••••••••••9b3c", active: true },
-  ]);
-  const [webhooks, setWebhooks] = useState<Webhook[]>([
-    { id: "1", name: "Google Calendar Sync", url: "https://hooks.make.com/abcd1234", active: true },
-    { id: "2", name: "Slack Notifications", url: "https://hooks.slack.com/services/T0/B0/xyz", active: false },
-  ]);
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 1500);
-  };
-
-  const iconBtn = (title: string, icon: React.ReactNode, onClick: () => void) => (
-    <button title={title} onClick={onClick} className="stg-btn-icon" style={{
-      background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", color: "#475569",
-    }}>{icon}</button>
-  );
-
-  const addBtn = (label: string) => (
-    <button style={{
-      display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 500,
-      padding: "6px 12px", borderRadius: 7,
-      border: "1px solid rgba(6,182,212,0.25)", background: "rgba(6,182,212,0.07)",
-      color: "#22d3ee", cursor: "pointer", fontFamily: "inherit",
-    }}>
-      <Plus size={12} /> {label}
-    </button>
-  );
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <SectionTitle>API Keys</SectionTitle>
-          {addBtn("Thêm key")}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {apiKeys.map(k => (
-            <div key={k.id} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "11px 14px", borderRadius: 9,
-              background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
-            }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.12)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}><Key size={13} style={{ color: "#22d3ee" }} /></div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 500, color: "#e2e8f0", margin: "0 0 2px" }}>{k.name}</p>
-                <code style={{ fontSize: 11, color: "#475569", fontFamily: "monospace" }}>{k.key}</code>
-              </div>
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-                background: k.active ? "rgba(34,197,94,0.08)" : "rgba(100,116,139,0.08)",
-                color: k.active ? "#4ade80" : "#64748b",
-                border: `1px solid ${k.active ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.15)"}`,
-              }}>{k.active ? "Active" : "Inactive"}</span>
-              {iconBtn("Copy", copied === k.id ? <Check size={13} style={{ color: "#4ade80" }} /> : <Copy size={13} />, () => handleCopy(k.id, k.key))}
-              {iconBtn("Regenerate", <RefreshCw size={13} />, () => {})}
-              {iconBtn("Delete", <Trash2 size={13} />, () => setApiKeys(p => p.filter(x => x.id !== k.id)))}
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <SectionTitle>Webhooks</SectionTitle>
-          {addBtn("Thêm webhook")}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {webhooks.map(w => (
-            <div key={w.id} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "11px 14px", borderRadius: 9,
-              background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
-            }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.12)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}><Link2 size={13} style={{ color: "#22d3ee" }} /></div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 500, color: "#e2e8f0", margin: "0 0 2px" }}>{w.name}</p>
-                <p style={{ fontSize: 11, color: "#475569", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.url}</p>
-              </div>
-              <Toggle checked={w.active} onChange={v => setWebhooks(p => p.map(x => x.id === w.id ? { ...x, active: v } : x))} />
-              {iconBtn("Delete", <Trash2 size={13} />, () => setWebhooks(p => p.filter(x => x.id !== w.id)))}
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-}
 
 function AIConfigPanel() {
   const [thresh, setThresh] = useState({ strongHire: 8, hire: 6, maybe: 4 });
@@ -1091,7 +987,6 @@ const PERSONAL_TABS: TabDef[] = [
 ];
 
 const ADMIN_TABS: TabDef[] = [
-  { id: "integrations",     label: "Tích hợp & Webhook",  icon: Plug,        adminOnly: true },
   { id: "ai-config",        label: "Cấu hình AI",          icon: Brain,       adminOnly: true },
   { id: "calendar",         label: "Lịch & Giờ làm việc", icon: CalendarDays, adminOnly: true },
   { id: "email-templates",  label: "Mẫu Email",            icon: Mail,        adminOnly: true },
@@ -1101,8 +996,7 @@ const TITLES: Record<string, { title: string; desc: string }> = {
   "profile":          { title: "Hồ sơ tài khoản",     desc: "Quản lý thông tin cá nhân và bảo mật tài khoản" },
   "appearance":       { title: "Giao diện & Hiển thị", desc: "Tùy chỉnh chế độ sáng/tối và ngôn ngữ hiển thị" },
   "notifications":    { title: "Thông báo",            desc: "Cài đặt kênh và loại thông báo muốn nhận" },
-  "integrations":     { title: "Tích hợp & Webhook",   desc: "Quản lý API keys và kết nối bên thứ ba" },
-  "ai-config":        { title: "Cấu hình AI",          desc: "Điều chỉnh ngưỡng điểm và trọng số chấm điểm AI" },
+"ai-config":        { title: "Cấu hình AI",          desc: "Điều chỉnh ngưỡng điểm và trọng số chấm điểm AI" },
   "calendar":         { title: "Lịch & Giờ làm việc",  desc: "Cấu hình giờ làm việc và quy tắc đặt lịch phỏng vấn" },
   "email-templates":  { title: "Mẫu Email",            desc: "Chỉnh sửa nội dung email tự động của hệ thống" },
 };
@@ -1148,8 +1042,7 @@ export default function SettingsPage() {
       case "profile":          return <ProfilePanel initials={profile.initials} name={profile.name} email={profile.email} />;
       case "appearance":       return <AppearancePanel />;
       case "notifications":    return <NotificationsPanel />;
-      case "integrations":     return <IntegrationsPanel />;
-      case "ai-config":        return <AIConfigPanel />;
+case "ai-config":        return <AIConfigPanel />;
       case "calendar":         return <CalendarPanel />;
       case "email-templates":  return <EmailTemplatesPanel />;
       default:                 return null;
