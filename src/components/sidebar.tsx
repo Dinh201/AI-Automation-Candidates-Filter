@@ -119,7 +119,7 @@ export function Sidebar() {
       if (!user) return;
       const { data } = await supabase
         .from("user_profiles")
-        .select("full_name, role")
+        .select("full_name, role, avatar_url")
         .eq("id", user.id)
         .single();
       const name =
@@ -132,6 +132,11 @@ export function Sidebar() {
         .slice(0, 2)
         .toUpperCase();
       setProfile({ name, role, initials });
+      // Ưu tiên avatar từ DB (đồng bộ giữa các thiết bị)
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+        localStorage.setItem("ats_avatar", data.avatar_url);
+      }
     });
   }, []);
 

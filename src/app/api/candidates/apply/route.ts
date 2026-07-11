@@ -3,7 +3,8 @@ import { Buffer } from "buffer";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { extractTextFromPDF } from "@/lib/pdf-parser";
 import { scoreCandidate } from "@/services/ai/scoring";
-import { sendCandidateAppliedNotification } from "@/services/email-service";
+import { sendCandidateAppliedToEmails } from "@/services/email-service";
+import { sendPushToAll } from "@/lib/push-service";
 
 // Cho phép route chạy lâu hơn 30s mặc định (cần thiết cho AI scoring)
 export const maxDuration = 120;
@@ -152,8 +153,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Gửi thông báo cho HR (không block response nếu email lỗi)
-    sendCandidateAppliedNotification({
+    // Gửi thông báo cho HR dựa theo notification_prefs (không block response)
+    const notifPayload = {
       candidateName: name,
       candidateEmail: email,
       jobTitle: job?.title ?? "Vị trí không xác định",
@@ -163,7 +164,47 @@ export async function POST(request: Request) {
       totalScore: aiResult?.total_score,
       finalDecision: aiResult?.final_decision,
       scoringFailed,
-    }).catch((err) => console.error("Không gửi được email HR:", err));
+    };
+
+    void (async () => {
+      try {
+        const { data: profiles } = await supabaseAdmin
+          .from("user_profiles")
+          .select("id, notification_prefs");
+
+        if (profiles) {
+          // Email: gửi tới những user có emailApplicant = true
+          const emailEnabled = profiles.filter((p) => {
+            const prefs = p.notification_prefs as Record<string, boolean> | null;
+            return prefs?.emailApplicant !== false;
+          });
+
+          if (emailEnabled.length > 0) {
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const emailMap = new Map(
+              authUsers?.users?.map((u) => [u.id, u.email]) ?? []
+            );
+            const emails = emailEnabled
+              .map((p) => emailMap.get(p.id))
+              .filter((e): e is string => !!e);
+            await sendCandidateAppliedToEmails(emails, notifPayload);
+          }
+        }
+
+        // Push: gửi tới những user có pushApplicant = true
+        await sendPushToAll(
+          {
+            title: "Ứng viên mới nộp hồ sơ",
+            body: `${name} vừa ứng tuyển vị trí ${job?.title ?? ""}`,
+            url: `/candidates/${candidate.id}`,
+            tag: `candidate-${candidate.id}`,
+          },
+          "pushApplicant"
+        );
+      } catch (err) {
+        console.error("[notify] Lỗi gửi thông báo ứng viên mới:", err);
+      }
+    })();
 
     return NextResponse.json(
       {

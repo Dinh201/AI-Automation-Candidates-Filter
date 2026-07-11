@@ -3,6 +3,10 @@
     {
       "path": "/api/email/process-incoming",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/interviews/reminder",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

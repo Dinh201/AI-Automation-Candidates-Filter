@@ -189,12 +189,28 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarFileRef = useRef<File | null>(null);
 
   useEffect(() => { setName(initName); }, [initName]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("ats_avatar");
-    if (saved) setAvatarUrl(saved);
+    // Hiển thị cache ngay lập tức, sau đó load từ DB
+    const cached = localStorage.getItem("ats_avatar");
+    if (cached) setAvatarUrl(cached);
+
+    const supabase = createSupabaseBrowser();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("avatar_url")
+        .eq("id", user.id)
+        .single();
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+        localStorage.setItem("ats_avatar", data.avatar_url);
+      }
+    });
   }, []);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,6 +225,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
       return;
     }
     setAvatarError(null);
+    avatarFileRef.current = file;
     const reader = new FileReader();
     reader.onload = (ev) => setAvatarUrl(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -243,9 +260,30 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
       setCurPw(""); setNewPw(""); setCnfPw("");
     }
 
-    if (avatarUrl?.startsWith("data:")) {
-      localStorage.setItem("ats_avatar", avatarUrl);
+    // Upload ảnh mới lên Supabase Storage nếu có
+    if (avatarFileRef.current) {
+      const file = avatarFileRef.current;
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) {
+        setSaveError("Không thể tải ảnh lên. Vui lòng thử lại.");
+        return;
+      }
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(path);
+      const avatarWithCacheBust = `${publicUrl}?v=${Date.now()}`;
+      await supabase
+        .from("user_profiles")
+        .update({ avatar_url: avatarWithCacheBust })
+        .eq("id", user.id);
+      setAvatarUrl(avatarWithCacheBust);
+      localStorage.setItem("ats_avatar", avatarWithCacheBust);
       window.dispatchEvent(new Event("ats_avatar_updated"));
+      avatarFileRef.current = null;
     }
 
     setSaved(true);
@@ -441,29 +479,152 @@ function AppearancePanel() {
   );
 }
 
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+
+async function registerPushSubscription(): Promise<PushSubscription | null> {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return null;
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return null;
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+  const existing = await reg.pushManager.getSubscription();
+  if (existing) return existing;
+  return reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: VAPID_PUBLIC_KEY,
+  });
+}
+
+async function unregisterPushSubscription(): Promise<string | null> {
+  if (!("serviceWorker" in navigator)) return null;
+  const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+  if (!reg) return null;
+  const sub = await reg.pushManager.getSubscription();
+  if (sub) {
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe();
+    return endpoint;
+  }
+  return null;
+}
+
+type NotifState = { emailApplicant: boolean; emailInterview: boolean; pushApplicant: boolean; pushInterview: boolean };
+
 function NotificationsPanel() {
-  const [state, setState] = useState({
+  const [state, setState] = useState<NotifState>({
     emailApplicant: true, emailInterview: true,
     pushApplicant: false, pushInterview: true,
   });
   const [saved, setSaved] = useState(false);
-  const set = (key: keyof typeof state) => (v: boolean) => setState(p => ({ ...p, [key]: v }));
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [pushSupported, setPushSupported] = useState(true);
+  const [pushError, setPushError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPushSupported("serviceWorker" in navigator && "PushManager" in window && !!VAPID_PUBLIC_KEY);
+    const supabase = createSupabaseBrowser();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("notification_prefs")
+        .eq("id", user.id)
+        .single();
+      if (data?.notification_prefs) {
+        setState(data.notification_prefs as NotifState);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const handleToggle = async (key: keyof NotifState, value: boolean) => {
+    setState(p => ({ ...p, [key]: value }));
+
+    // Đăng ký / hủy push ngay khi bật/tắt
+    if ((key === "pushApplicant" || key === "pushInterview") && !pushError) {
+      const newPushState = { ...state, [key]: value };
+      const anyPushOn = newPushState.pushApplicant || newPushState.pushInterview;
+
+      if (anyPushOn) {
+        try {
+          const sub = await registerPushSubscription();
+          if (sub) {
+            await fetch("/api/push/subscribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ subscription: sub }),
+            });
+            setPushError(null);
+          } else {
+            setPushError("Trình duyệt chưa cấp quyền thông báo.");
+            setState(p => ({ ...p, [key]: false }));
+          }
+        } catch {
+          setPushError("Không thể đăng ký push notification.");
+          setState(p => ({ ...p, [key]: false }));
+        }
+      } else {
+        // Tắt tất cả push → hủy subscription
+        try {
+          const endpoint = await unregisterPushSubscription();
+          if (endpoint) {
+            await fetch("/api/push/subscribe", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ endpoint }),
+            });
+          }
+          setPushError(null);
+        } catch {
+          // Không block UI nếu unsubscribe lỗi
+        }
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const supabase = createSupabaseBrowser();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("user_profiles")
+        .update({ notification_prefs: state })
+        .eq("id", user.id);
+    }
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  if (loading) {
+    return <div style={{ color: "var(--stg-text-dim)", fontSize: 13 }}>Đang tải...</div>;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
         <SectionTitle>Thông báo Email</SectionTitle>
-        <ToggleRow icon={User} label="Ứng viên mới" description="Nhận email khi có ứng viên mới nộp đơn" checked={state.emailApplicant} onChange={set("emailApplicant")} />
-        <ToggleRow icon={CalendarDays} label="Lịch phỏng vấn" description="Email xác nhận khi lịch phỏng vấn được tạo hoặc cập nhật" checked={state.emailInterview} onChange={set("emailInterview")} />
+        <ToggleRow icon={User} label="Ứng viên mới" description="Nhận email khi có ứng viên mới nộp đơn" checked={state.emailApplicant} onChange={(v) => handleToggle("emailApplicant", v)} />
+        <ToggleRow icon={CalendarDays} label="Lịch phỏng vấn" description="Email xác nhận khi lịch phỏng vấn được tạo hoặc cập nhật" checked={state.emailInterview} onChange={(v) => handleToggle("emailInterview", v)} />
       </Card>
 
       <Card>
         <SectionTitle>Thông báo Trình duyệt (Push)</SectionTitle>
-        <ToggleRow icon={Bell} label="Ứng viên mới" description="Thông báo tức thì khi có CV mới" checked={state.pushApplicant} onChange={set("pushApplicant")} />
-        <ToggleRow icon={Clock} label="Nhắc nhở phỏng vấn" description="Push notification 30 phút trước lịch phỏng vấn" checked={state.pushInterview} onChange={set("pushInterview")} />
+        {!pushSupported && (
+          <p style={{ fontSize: 12, color: "#f87171", margin: "0 0 12px" }}>
+            Trình duyệt chưa hỗ trợ push notification hoặc VAPID key chưa được cấu hình.
+          </p>
+        )}
+        {pushError && (
+          <p style={{ fontSize: 12, color: "#f87171", margin: "0 0 12px" }}>{pushError}</p>
+        )}
+        <ToggleRow icon={Bell} label="Ứng viên mới" description="Thông báo tức thì khi có CV mới" checked={state.pushApplicant} onChange={(v) => pushSupported && handleToggle("pushApplicant", v)} />
+        <ToggleRow icon={Clock} label="Nhắc nhở phỏng vấn" description="Push notification 30 phút trước lịch phỏng vấn" checked={state.pushInterview} onChange={(v) => pushSupported && handleToggle("pushInterview", v)} />
       </Card>
 
-      <SaveBar onSave={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }} saved={saved} />
+      <SaveBar onSave={handleSave} saved={saved || saving} />
     </div>
   );
 }

@@ -467,3 +467,86 @@ export async function sendCandidateAppliedNotification(data: CandidateAppliedDat
     html: buildCandidateAppliedHtml(data),
   });
 }
+
+export async function sendCandidateAppliedToEmails(
+  emails: string[],
+  data: CandidateAppliedData
+): Promise<void> {
+  if (!GMAIL_USER || emails.length === 0) return;
+  const transporter = createTransporter();
+  const sends = emails.map((to) =>
+    transporter.sendMail({
+      from: `${COMPANY} Recruitment <${GMAIL_USER}>`,
+      to,
+      subject: `[${COMPANY}] Hồ sơ mới: ${data.candidateName} – ${data.jobTitle}`,
+      html: buildCandidateAppliedHtml(data),
+    }).catch((err) => console.warn(`[email] Gửi thất bại cho ${to}:`, err))
+  );
+  await Promise.allSettled(sends);
+}
+
+function buildInterviewHRNotifyHtml(data: {
+  candidateName: string;
+  jobTitle: string;
+  interviewerName: string;
+  startTime: Date;
+  endTime: Date;
+  meetLink?: string;
+  notes?: string;
+  appUrl: string;
+  candidateId: string;
+}): string {
+  const startT = formatTime(data.startTime);
+  const endT = formatTime(data.endTime);
+  const date = formatDate(data.startTime);
+  const rows: InfoRow[] = [
+    { label: "Ứng viên", value: data.candidateName },
+    { label: "Vị trí", value: data.jobTitle },
+    { label: "Người phỏng vấn", value: data.interviewerName },
+    { label: "Thời gian", value: `${startT} – ${endT}, ${date}` },
+    ...(data.meetLink ? [{ label: "Link họp", value: "Tham gia Google Meet →", link: data.meetLink }] : []),
+  ];
+  const notesBlock = data.notes
+    ? `<div style="border-left:3px solid #208994;padding:12px 16px;margin-bottom:24px;background:#eff6ff;border-radius:0 8px 8px 0">
+        <p style="margin:0;color:#1e40af;font-size:14px;line-height:1.6"><strong>Ghi chú:</strong> ${data.notes}</p>
+       </div>`
+    : "";
+  const body = `
+    <h2 style="margin:0 0 6px;color:#09090b;font-size:22px;font-weight:700">Lịch phỏng vấn đã được tạo</h2>
+    <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
+      Một lịch phỏng vấn mới vừa được tạo trong hệ thống ATS.
+    </p>
+    ${infoTable(rows)}
+    ${notesBlock}
+    ${primaryButton(`${data.appUrl}/candidates/${data.candidateId}`, "Xem hồ sơ ứng viên →")}
+  `;
+  return emailWrapper("#208994", body, `Thông báo tự động từ hệ thống tuyển dụng ${COMPANY}.`);
+}
+
+export async function sendInterviewHRNotification(
+  emails: string[],
+  data: {
+    candidateName: string;
+    candidateId: string;
+    jobTitle: string;
+    interviewerName: string;
+    startTime: Date;
+    endTime: Date;
+    meetLink?: string;
+    notes?: string;
+    appUrl: string;
+  }
+): Promise<void> {
+  if (!GMAIL_USER || emails.length === 0) return;
+  const transporter = createTransporter();
+  const html = buildInterviewHRNotifyHtml(data);
+  const sends = emails.map((to) =>
+    transporter.sendMail({
+      from: `${COMPANY} HR <${GMAIL_USER}>`,
+      to,
+      subject: `[${COMPANY}] Lịch PV mới: ${data.candidateName} – ${data.jobTitle}`,
+      html,
+    }).catch((err) => console.warn(`[email] Gửi HR interview notify thất bại cho ${to}:`, err))
+  );
+  await Promise.allSettled(sends);
+}

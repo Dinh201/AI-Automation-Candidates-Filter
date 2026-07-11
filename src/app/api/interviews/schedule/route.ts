@@ -6,7 +6,8 @@ import {
   refreshAccessToken,
   GoogleTokens,
 } from "@/services/google-calendar-service";
-import { sendInterviewInvitation } from "@/services/email-service";
+import { sendInterviewInvitation, sendInterviewHRNotification } from "@/services/email-service";
+import { sendPushToAll } from "@/lib/push-service";
 import { logAudit } from "@/services/audit-service";
 
 async function getCalendarTokens(): Promise<GoogleTokens | null> {
@@ -241,6 +242,59 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Email send error (non-fatal):", err);
   }
+
+  // Gửi thông báo cho HR dựa theo notification_prefs (fire-and-forget)
+  void (async () => {
+    try {
+      const { data: profiles } = await supabaseAdmin
+        .from("user_profiles")
+        .select("id, notification_prefs");
+
+      if (profiles) {
+        const emailEnabled = profiles.filter((p) => {
+          const prefs = p.notification_prefs as Record<string, boolean> | null;
+          return prefs?.emailInterview !== false;
+        });
+
+        if (emailEnabled.length > 0) {
+          const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+          const emailMap = new Map(
+            authUsers?.users?.map((u) => [u.id, u.email]) ?? []
+          );
+          const hrEmails = emailEnabled
+            .map((p) => emailMap.get(p.id))
+            .filter((e): e is string => !!e && e !== interviewer_email);
+
+          if (hrEmails.length > 0) {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+            await sendInterviewHRNotification(hrEmails, {
+              candidateName: candidate.name,
+              candidateId: candidate_id,
+              jobTitle,
+              interviewerName: interviewer_name,
+              startTime: startDate,
+              endTime: endDate,
+              meetLink: meetLink ?? undefined,
+              notes,
+              appUrl,
+            });
+          }
+        }
+      }
+
+      await sendPushToAll(
+        {
+          title: "Lịch phỏng vấn mới",
+          body: `${candidate.name} – ${jobTitle} vào ${startDate.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" })}`,
+          url: "/interviews",
+          tag: `interview-${interview.id}`,
+        },
+        "pushInterview"
+      );
+    } catch (err) {
+      console.error("[notify] Lỗi gửi thông báo lịch phỏng vấn:", err);
+    }
+  })();
 
   return NextResponse.json({
     success: true,
