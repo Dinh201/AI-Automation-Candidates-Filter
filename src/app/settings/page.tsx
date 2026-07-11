@@ -381,13 +381,6 @@ function AppearancePanel() {
   const [lang, setLang] = useState<"vi" | "en">("vi");
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    const t = (localStorage.getItem("ats_theme") as "light" | "dark" | "system") || "dark";
-    const l = (localStorage.getItem("ats_lang") as "vi" | "en") || "vi";
-    setTheme(t);
-    setLang(l);
-  }, []);
-
   const applyTheme = (t: "light" | "dark" | "system") => {
     const html = document.documentElement;
     if (t === "light") {
@@ -402,6 +395,15 @@ function AppearancePanel() {
       }
     }
   };
+
+  useEffect(() => {
+    const t = (localStorage.getItem("ats_theme") as "light" | "dark" | "system") || "dark";
+    const l = (localStorage.getItem("ats_lang") as "vi" | "en") || "vi";
+    setTheme(t);
+    setLang(l);
+    applyTheme(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleThemeChange = (t: "light" | "dark" | "system") => {
     setTheme(t);
@@ -888,6 +890,7 @@ Trân trọng,
   const [active, setActive] = useState("interview");
   const [templates, setTemplates] = useState(DEFAULTS);
   const [saved, setSaved] = useState(false);
+  const [taFocused, setTaFocused] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const VARS = [
@@ -912,10 +915,10 @@ Trân trọng,
           <button key={t.id} onClick={() => setActive(t.id)} style={{
             flex: 1, padding: "10px 12px",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-            background: active === t.id ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.025)",
-            border: `1px solid ${active === t.id ? "rgba(6,182,212,0.35)" : "rgba(255,255,255,0.07)"}`,
+            background: active === t.id ? "rgba(6,182,212,0.1)" : "var(--stg-btn-bg)",
+            border: `1px solid ${active === t.id ? "rgba(6,182,212,0.35)" : "var(--stg-btn-border)"}`,
             borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
-            color: active === t.id ? "#22d3ee" : "#64748b",
+            color: active === t.id ? "#22d3ee" : "var(--stg-text-label)",
             fontSize: 12, fontWeight: 500, transition: "all 0.15s",
           }}>
             <t.icon size={13} /> {t.label}
@@ -931,7 +934,7 @@ Trân trọng,
             onChange={v => setTemplates(p => ({ ...p, [active]: { ...p[active], subject: v } }))}
           />
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Nội dung email</label>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Nội dung email</label>
             <textarea
               ref={taRef}
               value={templates[active].body}
@@ -939,14 +942,15 @@ Trân trọng,
               rows={13}
               style={{
                 width: "100%", boxSizing: "border-box",
-                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 8, padding: 12, fontSize: 13, color: "#e2e8f0",
+                background: "var(--stg-input-bg)",
+                border: `1px solid ${taFocused ? "rgba(6,182,212,0.4)" : "var(--stg-input-border)"}`,
+                borderRadius: 8, padding: 12, fontSize: 13, color: "var(--stg-input-color)",
                 lineHeight: 1.7, outline: "none", resize: "vertical",
                 fontFamily: "ui-monospace, 'Cascadia Code', monospace",
                 transition: "border-color 0.15s",
               }}
-              onFocus={e => { e.target.style.borderColor = "rgba(6,182,212,0.4)"; }}
-              onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.08)"; }}
+              onFocus={() => setTaFocused(true)}
+              onBlur={() => setTaFocused(false)}
             />
           </div>
         </div>
