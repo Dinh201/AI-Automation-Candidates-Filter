@@ -136,17 +136,64 @@ function FluidCanvas() {
   );
 }
 
+/* ── Shared input style helper ── */
+const inputStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)",
+  borderRadius: 8, padding: "10px 14px", fontSize: 14, color: "#ffffff",
+  outline: "none", transition: "border-color 0.15s",
+};
+
+function InputField({
+  label, type = "text", value, onChange, placeholder, disabled, children,
+}: {
+  label: string; type?: string; value: string;
+  onChange: (v: string) => void; placeholder?: string;
+  disabled?: boolean; children?: React.ReactNode;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
+        {label}
+      </label>
+      <div style={{ position: "relative" }}>
+        <input
+          className="lp-input"
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required
+          disabled={disabled}
+          style={{
+            ...inputStyle,
+            borderColor: focused ? "#06b6d4" : "rgba(255,255,255,0.14)",
+            paddingRight: children ? 40 : 14,
+          }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /* ── Form panel — isolated so useSearchParams can be Suspense-wrapped ── */
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
 
+  const [tab, setTab]           = useState<"login" | "register">("login");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm]   = useState("");
   const [showPw, setShowPw]     = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
+  const [success, setSuccess]   = useState<string | null>(null);
 
   const supabase = createSupabaseBrowser();
 
@@ -156,7 +203,15 @@ function LoginForm() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function switchTab(next: "login" | "register") {
+    setTab(next);
+    setError(null);
+    setSuccess(null);
+    setPassword("");
+    setConfirm("");
+  }
+
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -179,6 +234,66 @@ function LoginForm() {
     router.replace(redirect);
     router.refresh();
   }
+
+  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    if (password !== confirm) {
+      setError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Mật khẩu phải có ít nhất 6 ký tự.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: { full_name: fullName.trim() } },
+    });
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Email đã tồn tại — Supabase trả về user nhưng identities rỗng
+    if (data.user && data.user.identities?.length === 0) {
+      setError("Email này đã được đăng ký. Vui lòng đăng nhập.");
+      setLoading(false);
+      return;
+    }
+
+    // Nếu có session ngay (email confirmation tắt) → vào thẳng app
+    if (data.session) {
+      router.replace(redirect);
+      router.refresh();
+      return;
+    }
+
+    // Cần xác nhận email
+    setSuccess("Đăng ký thành công! Kiểm tra hộp thư để xác nhận tài khoản, sau đó đăng nhập.");
+    setLoading(false);
+  }
+
+  const EyeBtn = () => (
+    <button
+      type="button"
+      onClick={() => setShowPw(!showPw)}
+      style={{
+        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+        background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+        cursor: "pointer", padding: 4, display: "flex",
+      }}
+    >
+      {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+    </button>
+  );
 
   return (
     <div style={{
@@ -206,113 +321,112 @@ function LoginForm() {
 
       {/* Form body */}
       <div style={{ width: "100%", maxWidth: 300 }}>
-        <h1 style={{
-          fontSize: 26, fontWeight: 700, color: "#ffffff",
-          fontFamily: "Georgia, 'Times New Roman', serif",
-          letterSpacing: "-0.02em", textAlign: "center", margin: "0 0 8px",
+        {/* Tab toggle */}
+        <div style={{
+          display: "flex", gap: 4, background: "rgba(255,255,255,0.07)",
+          borderRadius: 10, padding: 4, marginBottom: 24,
         }}>
-          Welcome Back
+          {(["login", "register"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => switchTab(t)}
+              style={{
+                flex: 1, padding: "7px 0", borderRadius: 7, border: "none",
+                fontSize: 13, fontWeight: 600, cursor: "pointer",
+                transition: "all 0.18s",
+                background: tab === t ? "rgba(255,255,255,0.15)" : "transparent",
+                color: tab === t ? "#ffffff" : "rgba(255,255,255,0.4)",
+                boxShadow: tab === t ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
+              }}
+            >
+              {t === "login" ? "Đăng nhập" : "Đăng ký"}
+            </button>
+          ))}
+        </div>
+
+        <h1 style={{
+          fontSize: 22, fontWeight: 700, color: "#ffffff",
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          letterSpacing: "-0.02em", textAlign: "center", margin: "0 0 6px",
+        }}>
+          {tab === "login" ? "Welcome Back" : "Tạo tài khoản"}
         </h1>
-        <p style={{ textAlign: "center", color: "rgba(255,255,255,0.45)", fontSize: 13, margin: "0 0 28px" }}>
-          Nhập thông tin để truy cập hệ thống
+        <p style={{ textAlign: "center", color: "rgba(255,255,255,0.45)", fontSize: 13, margin: "0 0 22px" }}>
+          {tab === "login" ? "Nhập thông tin để truy cập hệ thống" : "Điền thông tin để bắt đầu sử dụng"}
         </p>
 
         {error && (
           <div style={{
-            display: "flex", alignItems: "center", gap: 8,
+            display: "flex", alignItems: "flex-start", gap: 8,
             background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
             borderRadius: 8, padding: "10px 12px", marginBottom: 16,
           }}>
-            <AlertCircle size={14} style={{ color: "#f87171", flexShrink: 0 }} />
+            <AlertCircle size={14} style={{ color: "#f87171", flexShrink: 0, marginTop: 1 }} />
             <p style={{ color: "#fca5a5", fontSize: 13, margin: 0 }}>{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
-              Email
-            </label>
-            <input
-              className="lp-input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
+        {success && (
+          <div style={{
+            background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
+            borderRadius: 8, padding: "10px 12px", marginBottom: 16,
+          }}>
+            <p style={{ color: "#86efac", fontSize: 13, margin: 0 }}>{success}</p>
+          </div>
+        )}
+
+        {tab === "login" ? (
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <InputField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@company.com" disabled={loading} />
+            <InputField label="Mật khẩu" type={showPw ? "text" : "password"} value={password} onChange={setPassword} placeholder="••••••••" disabled={loading}>
+              <EyeBtn />
+            </InputField>
+
+            <button
+              className="lp-btn"
+              type="submit"
               disabled={loading}
               style={{
-                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)",
-                borderRadius: 8, padding: "10px 14px", fontSize: 14, color: "#ffffff",
-                outline: "none", transition: "border-color 0.15s",
+                display: "block", width: "100%", padding: "11px",
+                background: loading ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8,
+                color: "white", fontSize: 14, fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                transition: "background 0.15s", marginTop: 4,
               }}
-              onFocus={(e) => (e.target.style.borderColor = "#06b6d4")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.14)")}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
-              Password
-            </label>
-            <div style={{ position: "relative" }}>
-              <input
-                className="lp-input"
-                type={showPw ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={loading}
-                style={{
-                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 8, padding: "10px 40px 10px 14px", fontSize: 14, color: "#ffffff",
-                  outline: "none", transition: "border-color 0.15s",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#06b6d4")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.14)")}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPw(!showPw)}
-                style={{
-                  position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-                  background: "none", border: "none", color: "rgba(255,255,255,0.4)",
-                  cursor: "pointer", padding: 4, display: "flex",
-                }}
-              >
-                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -4 }}>
-            <button
-              type="button"
-              style={{ background: "none", border: "none", fontSize: 13, color: "rgba(255,255,255,0.4)", cursor: "pointer", padding: 0 }}
             >
-              Quên mật khẩu?
+              {loading ? "Đang đăng nhập…" : "Đăng nhập"}
             </button>
-          </div>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <InputField label="Họ và tên" value={fullName} onChange={setFullName} placeholder="Nguyễn Văn A" disabled={loading} />
+            <InputField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@company.com" disabled={loading} />
+            <InputField label="Mật khẩu" type={showPw ? "text" : "password"} value={password} onChange={setPassword} placeholder="Tối thiểu 6 ký tự" disabled={loading}>
+              <EyeBtn />
+            </InputField>
+            <InputField label="Xác nhận mật khẩu" type={showPw ? "text" : "password"} value={confirm} onChange={setConfirm} placeholder="Nhập lại mật khẩu" disabled={loading} />
 
-          <button
-            className="lp-btn"
-            type="submit"
-            disabled={loading}
-            style={{
-              display: "block", width: "100%", padding: "11px",
-              background: loading ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8,
-              color: "white", fontSize: 14, fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              transition: "background 0.15s", marginTop: 4,
-            }}
-          >
-            {loading ? "Đang đăng nhập…" : "Sign In"}
-          </button>
-        </form>
+            <button
+              className="lp-btn"
+              type="submit"
+              disabled={loading}
+              style={{
+                display: "block", width: "100%", padding: "11px",
+                background: loading ? "rgba(255,255,255,0.08)" : "linear-gradient(135deg, rgba(6,182,212,0.3), rgba(99,102,241,0.3))",
+                border: "1px solid rgba(6,182,212,0.35)", borderRadius: 8,
+                color: "white", fontSize: 14, fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                transition: "background 0.15s", marginTop: 4,
+              }}
+            >
+              {loading ? "Đang tạo tài khoản…" : "Tạo tài khoản"}
+            </button>
+          </form>
+        )}
 
-        <p style={{ textAlign: "center", marginTop: 32, color: "rgba(255,255,255,0.25)", fontSize: 11 }}>
+        <p style={{ textAlign: "center", marginTop: 28, color: "rgba(255,255,255,0.25)", fontSize: 11 }}>
           ATS Internal · v0.1.0 MVP Build
         </p>
       </div>
