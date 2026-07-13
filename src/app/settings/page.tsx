@@ -745,22 +745,67 @@ function AIConfigPanel() {
   );
 }
 
+const CALENDAR_LS_KEY = "ats_calendar_settings";
+
+type CalendarSettings = {
+  workDays: number[];
+  wStart: string;
+  wEnd: string;
+  lStart: string;
+  lEnd: string;
+  tz: string;
+  buffer: number;
+};
+
+const CALENDAR_DEFAULTS: CalendarSettings = {
+  workDays: [1, 2, 3, 4, 5],
+  wStart: "08:00",
+  wEnd: "17:30",
+  lStart: "12:00",
+  lEnd: "13:30",
+  tz: "Asia/Ho_Chi_Minh",
+  buffer: 15,
+};
+
 function CalendarPanel() {
   const DAYS = [
     { id: 1, label: "T2" }, { id: 2, label: "T3" }, { id: 3, label: "T4" },
     { id: 4, label: "T5" }, { id: 5, label: "T6" }, { id: 6, label: "T7" }, { id: 0, label: "CN" },
   ];
-  const [workDays, setWorkDays] = useState([1, 2, 3, 4, 5]);
-  const [wStart, setWStart] = useState("08:00");
-  const [wEnd, setWEnd] = useState("17:30");
-  const [lStart, setLStart] = useState("12:00");
-  const [lEnd, setLEnd] = useState("13:30");
-  const [tz, setTz] = useState("Asia/Ho_Chi_Minh");
-  const [buffer, setBuffer] = useState(15);
+  const [workDays, setWorkDays] = useState(CALENDAR_DEFAULTS.workDays);
+  const [wStart, setWStart] = useState(CALENDAR_DEFAULTS.wStart);
+  const [wEnd, setWEnd] = useState(CALENDAR_DEFAULTS.wEnd);
+  const [lStart, setLStart] = useState(CALENDAR_DEFAULTS.lStart);
+  const [lEnd, setLEnd] = useState(CALENDAR_DEFAULTS.lEnd);
+  const [tz, setTz] = useState(CALENDAR_DEFAULTS.tz);
+  const [buffer, setBuffer] = useState(CALENDAR_DEFAULTS.buffer);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CALENDAR_LS_KEY);
+      if (stored) {
+        const s: CalendarSettings = JSON.parse(stored);
+        setWorkDays(s.workDays ?? CALENDAR_DEFAULTS.workDays);
+        setWStart(s.wStart ?? CALENDAR_DEFAULTS.wStart);
+        setWEnd(s.wEnd ?? CALENDAR_DEFAULTS.wEnd);
+        setLStart(s.lStart ?? CALENDAR_DEFAULTS.lStart);
+        setLEnd(s.lEnd ?? CALENDAR_DEFAULTS.lEnd);
+        setTz(s.tz ?? CALENDAR_DEFAULTS.tz);
+        setBuffer(s.buffer ?? CALENDAR_DEFAULTS.buffer);
+      }
+    } catch { /* ignore corrupt storage */ }
+  }, []);
 
   const toggleDay = (id: number) =>
     setWorkDays(p => p.includes(id) ? p.filter(d => d !== id) : [...p, id]);
+
+  const handleSave = () => {
+    const settings: CalendarSettings = { workDays, wStart, wEnd, lStart, lEnd, tz, buffer };
+    localStorage.setItem(CALENDAR_LS_KEY, JSON.stringify(settings));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -772,9 +817,9 @@ function CalendarPanel() {
             return (
               <button key={d.id} onClick={() => toggleDay(d.id)} style={{
                 flex: 1, padding: "10px 4px", borderRadius: 9,
-                border: `1px solid ${on ? "rgba(6,182,212,0.4)" : "rgba(255,255,255,0.07)"}`,
-                background: on ? "rgba(6,182,212,0.1)" : "rgba(255,255,255,0.025)",
-                color: on ? "#22d3ee" : "#475569",
+                border: `1px solid ${on ? "rgba(6,182,212,0.4)" : "var(--stg-btn-border)"}`,
+                background: on ? "rgba(6,182,212,0.1)" : "var(--stg-btn-bg)",
+                color: on ? "#22d3ee" : "var(--stg-text-label)",
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
                 fontFamily: "inherit", transition: "all 0.15s",
               }}>{d.label}</button>
@@ -789,7 +834,7 @@ function CalendarPanel() {
           <SettingInput label="Bắt đầu" type="time" value={wStart} onChange={setWStart} />
           <SettingInput label="Kết thúc" type="time" value={wEnd} onChange={setWEnd} />
         </div>
-        <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "16px 0" }} />
+        <div style={{ height: 1, background: "var(--stg-divider)", margin: "16px 0" }} />
         <SectionTitle>Giờ nghỉ trưa</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <SettingInput label="Bắt đầu" type="time" value={lStart} onChange={setLStart} />
@@ -801,11 +846,11 @@ function CalendarPanel() {
         <SectionTitle>Cấu hình đặt lịch</SectionTitle>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Múi giờ</label>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Múi giờ</label>
             <select className="stg-select" value={tz} onChange={e => setTz(e.target.value)} style={{
               width: "100%", padding: "9px 12px",
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 8, fontSize: 14, color: "#e2e8f0",
+              background: "var(--stg-input-bg)", border: "1px solid var(--stg-input-border)",
+              borderRadius: 8, fontSize: 14, color: "var(--stg-input-color)",
               outline: "none", fontFamily: "inherit", cursor: "pointer",
             }}>
               <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (UTC+7)</option>
@@ -815,7 +860,7 @@ function CalendarPanel() {
           </div>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase" }}>Buffer giữa các slot</label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Buffer giữa các slot</label>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#22d3ee" }}>{buffer} phút</span>
             </div>
             <input type="range" min={0} max={30} step={5} value={buffer}
@@ -825,28 +870,24 @@ function CalendarPanel() {
                 background: `linear-gradient(to right, #06b6d4 ${(buffer / 30) * 100}%, rgba(255,255,255,0.1) ${(buffer / 30) * 100}%)`,
               }} />
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: "#334155" }}>0p</span>
-              <span style={{ fontSize: 10, color: "#334155" }}>30p</span>
+              <span style={{ fontSize: 10, color: "var(--stg-text-dim)" }}>0p</span>
+              <span style={{ fontSize: 10, color: "var(--stg-text-dim)" }}>30p</span>
             </div>
           </div>
         </div>
       </Card>
 
-      <SaveBar onSave={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }} saved={saved} />
+      <SaveBar onSave={handleSave} saved={saved} />
     </div>
   );
 }
 
-function EmailTemplatesPanel() {
-  const TMPL_TABS = [
-    { id: "interview", label: "Mời phỏng vấn", icon: CalendarDays },
-    { id: "rejection", label: "Từ chối", icon: X },
-    { id: "approval", label: "Phê duyệt nội bộ", icon: Check },
-  ];
-  const DEFAULTS: Record<string, { subject: string; body: string }> = {
-    interview: {
-      subject: "Thư mời phỏng vấn — {{position}} tại ATS Internal",
-      body: `Kính gửi {{candidate_name}},
+const EMAIL_TMPL_LS_KEY = "ats_email_templates";
+
+const EMAIL_TMPL_DEFAULTS: Record<string, { subject: string; body: string }> = {
+  interview: {
+    subject: "Thư mời phỏng vấn — {{position}} tại ATS Internal",
+    body: `Kính gửi {{candidate_name}},
 
 Cảm ơn bạn đã ứng tuyển vị trí {{position}}.
 
@@ -858,10 +899,10 @@ Vui lòng xác nhận trong vòng 24 giờ.
 
 Trân trọng,
 {{hr_name}} — Bộ phận Nhân sự`,
-    },
-    rejection: {
-      subject: "Kết quả ứng tuyển — {{position}}",
-      body: `Kính gửi {{candidate_name}},
+  },
+  rejection: {
+    subject: "Kết quả ứng tuyển — {{position}}",
+    body: `Kính gửi {{candidate_name}},
 
 Cảm ơn bạn đã dành thời gian ứng tuyển vị trí {{position}}.
 
@@ -869,10 +910,10 @@ Sau khi xem xét kỹ lưỡng, chúng tôi rất tiếc thông báo rằng hồ
 
 Trân trọng,
 {{hr_name}}`,
-    },
-    approval: {
-      subject: "Yêu cầu phê duyệt tuyển dụng — {{position}}",
-      body: `Kính gửi {{approver_name}},
+  },
+  approval: {
+    subject: "Yêu cầu phê duyệt tuyển dụng — {{position}}",
+    body: `Kính gửi {{approver_name}},
 
 Bộ phận HR kính trình để phê duyệt ứng viên sau:
 
@@ -884,11 +925,28 @@ Vui lòng xem xét và phê duyệt trong hệ thống ATS.
 
 Trân trọng,
 {{hr_name}}`,
-    },
-  };
+  },
+};
+
+function EmailTemplatesPanel() {
+  const TMPL_TABS = [
+    { id: "interview", label: "Mời phỏng vấn", icon: CalendarDays },
+    { id: "rejection", label: "Từ chối", icon: X },
+    { id: "approval", label: "Phê duyệt nội bộ", icon: Check },
+  ];
 
   const [active, setActive] = useState("interview");
-  const [templates, setTemplates] = useState(DEFAULTS);
+  const [templates, setTemplates] = useState(EMAIL_TMPL_DEFAULTS);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(EMAIL_TMPL_LS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setTemplates(prev => ({ ...prev, ...parsed }));
+      }
+    } catch { /* ignore corrupt storage */ }
+  }, []);
   const [saved, setSaved] = useState(false);
   const [taFocused, setTaFocused] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -970,7 +1028,11 @@ Trân trọng,
         </div>
       </Card>
 
-      <SaveBar onSave={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }} saved={saved} />
+      <SaveBar onSave={() => {
+        localStorage.setItem(EMAIL_TMPL_LS_KEY, JSON.stringify(templates));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      }} saved={saved} />
     </div>
   );
 }
