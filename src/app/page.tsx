@@ -254,7 +254,7 @@ export default async function DashboardPage() {
       label: "Tổng ứng viên",
       value: totalCandidates,
       icon: Users,
-      iconCls: "text-blue-400",
+      iconCls: "text-slate-700",
       cardCls: "stat-blue",
       href: "/candidates",
       note: `${scoredCount} đã chấm điểm`,
@@ -263,7 +263,7 @@ export default async function DashboardPage() {
       label: "PV tuần này",
       value: weekInterviewsCount,
       icon: Calendar,
-      iconCls: "text-violet-400",
+      iconCls: "text-slate-700",
       cardCls: "stat-violet",
       href: "/interviews",
       note: `${todayInterviews.length} hôm nay`,
@@ -272,7 +272,7 @@ export default async function DashboardPage() {
       label: "Vị trí đang tuyển",
       value: openJobsCount,
       icon: Briefcase,
-      iconCls: "text-amber-400",
+      iconCls: "text-slate-700",
       cardCls: "stat-amber",
       href: "/jobs",
       note: "Job đang mở",
@@ -281,7 +281,7 @@ export default async function DashboardPage() {
       label: "Strong Hire",
       value: strongHireCount,
       icon: TrendingUp,
-      iconCls: "text-emerald-400",
+      iconCls: "text-slate-700",
       cardCls: "stat-emerald",
       href: "/candidates",
       note: `${conversionRate}% tỷ lệ convert`,
@@ -302,13 +302,14 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 border border-blue-200 text-blue-600 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 border border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400 animate-pulse" />
             Live
           </div>
           <Link
             href="/cv-analyzer"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ats-btn-primary"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-900 hover:bg-gray-700 transition-colors"
+            style={{ color: "white" }}
           >
             Phân tích CV mới
           </Link>
@@ -318,23 +319,21 @@ export default async function DashboardPage() {
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(({ label, value, icon: Icon, iconCls, cardCls, href, note }) => (
-          <Link key={label} href={href} className="glass-card p-4 group hover:scale-[1.01] transition-transform duration-200 block">
+          <Link key={label} href={href} className={`glass-card p-4 group hover:scale-[1.01] transition-transform duration-200 block ${cardCls}`}>
             <div className="flex items-start justify-between mb-3">
-              <div
-                className={`w-9 h-9 rounded-xl border flex items-center justify-center ${cardCls}`}
-              >
+              <div className="w-9 h-9 rounded-xl border border-white/50 bg-white/85 flex items-center justify-center">
                 <Icon className={`w-4 h-4 ${iconCls}`} />
               </div>
               <ChevronRight
                 className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity"
-                style={{ color: "#60a5fa" }}
+                style={{ color: "white" }}
               />
             </div>
-            <p className="text-2xl font-bold ats-text-h tabular-nums">{value}</p>
-            <p className="text-xs font-medium mt-0.5 ats-text-body">
+            <p className="text-2xl font-bold tabular-nums" style={{ color: "white" }}>{value}</p>
+            <p className="text-xs font-medium mt-0.5" style={{ color: "rgba(255,255,255,0.85)" }}>
               {label}
             </p>
-            <p className="text-[11px] mt-1.5 font-medium badge-up px-1.5 py-0.5 rounded-md inline-block">
+            <p className="text-[11px] mt-1.5 font-medium px-1.5 py-0.5 rounded-md inline-block" style={{ color: "rgba(255,255,255,0.9)", background: "rgba(255,255,255,0.18)" }}>
               {note}
             </p>
           </Link>

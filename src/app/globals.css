@@ -86,11 +86,11 @@
   color-scheme: light;
 
   /* ATS custom tokens – light */
-  --ats-bg: #F1F5F9;
+  --ats-bg: linear-gradient(135deg, #ede9f7 0%, #eef1ff 55%, #e8f3ff 100%);
   --ats-surface: #ffffff;
   --ats-surface-2: #f8fafc;
-  --ats-border: rgba(0, 0, 0, 0.08);
-  --ats-card-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  --ats-border: rgba(0, 0, 0, 0.20);
+  --ats-card-shadow: 0 2px 10px rgba(109,91,211,0.10), 0 1px 3px rgba(0,0,0,0.05);
   --ats-accent: #2563eb;
   --ats-accent-muted: rgba(37, 99, 235, 0.12);
   --ats-accent-border: rgba(37, 99, 235, 0.25);
@@ -155,8 +155,8 @@
   --stg-nav-section-label: rgba(51,65,85,0.6);
 
   /* Sidebar tokens – light */
-  --sb-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  --sb-border: rgba(0,0,0,0.07);
+  --sb-bg: linear-gradient(180deg, #ece8f5 0%, #e8eafc 100%);
+  --sb-border: rgba(0,0,0,0.20);
   --sb-brand: #0f172a;
   --sb-brand-sub: #64748b;
   --sb-section-label: rgba(100,116,139,0.7);
@@ -170,10 +170,10 @@
   --sb-avatar-text: #1d4ed8;
   --sb-back-name: #4f46e5;
   --sb-version: rgba(71,85,105,0.5);
-  --sb-nav-active-bg: rgba(32,137,148,0.10);
-  --sb-nav-active-border: #208994;
-  --sb-nav-active-text: #208994;
-  --sb-nav-active-icon: #208994;
+  --sb-nav-active-bg: rgba(99,102,241,0.12);
+  --sb-nav-active-border: #6366f1;
+  --sb-nav-active-text: #4f46e5;
+  --sb-nav-active-icon: #6366f1;
 }
 
 .dark {
@@ -304,7 +304,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    background-color: var(--ats-bg);
+    background: var(--ats-bg);
+    background-attachment: fixed;
     @apply text-foreground min-h-screen selection:bg-blue-600/25;
   }
   html {
@@ -331,11 +332,11 @@
     border-radius: 0.875rem;
   }
 
-  /* ── Stat card accent utilities ── */
-  .stat-blue   { background: rgba(37,99,235,0.10); border-color: rgba(37,99,235,0.22); }
-  .stat-violet { background: rgba(124,58,237,0.10); border-color: rgba(124,58,237,0.22); }
-  .stat-emerald{ background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.22); }
-  .stat-amber  { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.22); }
+  /* ── Stat card accent utilities (dark mode: vivid solid) ── */
+  .stat-blue   { background: #2563eb; border-color: #1d4ed8; }
+  .stat-violet { background: #7c3aed; border-color: #6d28d9; }
+  .stat-emerald{ background: #10b981; border-color: #059669; }
+  .stat-amber  { background: #f59e0b; border-color: #d97706; }
 
   /* ── Scrollbar styling ── */
   .custom-scroll::-webkit-scrollbar       { width: 4px; }
@@ -386,22 +387,22 @@
 .rte-content {
   font-size: 0.875rem;
   line-height: 1.65;
-  color: rgb(203 213 225);
+  color: var(--ats-text-body);
 }
 .rte-content p { margin-bottom: 0.4rem; }
 .rte-content p:last-child { margin-bottom: 0; }
-.rte-content strong { font-weight: 600; color: #fff; }
+.rte-content strong { font-weight: 600; color: var(--ats-text-h); }
 .rte-content em { font-style: italic; }
 .rte-content u { text-decoration: underline; }
 .rte-content ul  { list-style-type: disc;    padding-left: 1.3rem; margin-bottom: 0.4rem; }
 .rte-content ol  { list-style-type: decimal; padding-left: 1.3rem; margin-bottom: 0.4rem; }
 .rte-content li  { margin-bottom: 0.2rem; }
-.rte-content h1  { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
-.rte-content h2  { font-size: 1rem;   font-weight: 600; color: #fff; margin-bottom: 0.4rem; }
-.rte-content h3  { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.3rem; }
+.rte-content h1  { font-size: 1.1rem; font-weight: 700; color: var(--ats-text-h); margin-bottom: 0.5rem; }
+.rte-content h2  { font-size: 1rem;   font-weight: 600; color: var(--ats-text-h); margin-bottom: 0.4rem; }
+.rte-content h3  { font-size: 0.9rem; font-weight: 600; color: var(--ats-text-body); margin-bottom: 0.3rem; }
 .rte-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: rgb(71 85 105);
+  color: var(--ats-text-muted);
   float: left;
   height: 0;
   pointer-events: none;
@@ -411,13 +412,56 @@
 .job-html {
   font-size: 0.875rem;
   line-height: 1.65;
-  color: rgb(203 213 225);
+  color: var(--ats-text-body);
 }
 .job-html p          { margin-bottom: 0.4rem; }
 .job-html p:last-child { margin-bottom: 0; }
-.job-html strong     { font-weight: 600; color: #fff; }
+.job-html strong     { font-weight: 600; color: var(--ats-text-h); }
 .job-html em         { font-style: italic; }
 .job-html u          { text-decoration: underline; }
 .job-html ul         { list-style-type: disc;    padding-left: 1.3rem; margin-bottom: 0.4rem; }
 .job-html ol         { list-style-type: decimal; padding-left: 1.3rem; margin-bottom: 0.4rem; }
 .job-html li         { margin-bottom: 0.2rem; }
+
+/* ── Light mode: override hardcoded dark-mode Tailwind text/bg classes ── */
+html:not(.dark) .text-white,
+html:not(.dark) .text-zinc-50,
+html:not(.dark) .text-zinc-100,
+html:not(.dark) .text-zinc-200,
+html:not(.dark) .text-zinc-300,
+html:not(.dark) .text-zinc-400 { color: #1e293b; }
+
+html:not(.dark) .text-zinc-500,
+html:not(.dark) .text-zinc-600,
+html:not(.dark) .text-zinc-700 { color: #64748b; }
+
+html:not(.dark) .bg-zinc-900,
+html:not(.dark) .bg-zinc-800 { background-color: var(--ats-surface); }
+
+html:not(.dark) .border-zinc-900,
+html:not(.dark) .border-zinc-800,
+html:not(.dark) .border-zinc-700 { border-color: var(--ats-border); }
+
+html:not(.dark) .text-blue-300,
+html:not(.dark) .text-blue-400   { color: #1d4ed8; }
+html:not(.dark) .text-green-300,
+html:not(.dark) .text-green-400  { color: #15803d; }
+html:not(.dark) .text-emerald-300,
+html:not(.dark) .text-emerald-400 { color: #047857; }
+html:not(.dark) .text-red-300,
+html:not(.dark) .text-red-400    { color: #b91c1c; }
+html:not(.dark) .text-amber-300,
+html:not(.dark) .text-amber-400  { color: #b45309; }
+html:not(.dark) .text-indigo-300,
+html:not(.dark) .text-indigo-400 { color: #4338ca; }
+html:not(.dark) .text-violet-300,
+html:not(.dark) .text-violet-400 { color: #6d28d9; }
+
+html:not(.dark) .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); }
+html:not(.dark) .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+
+/* ── Light mode: stat card icon containers → vibrant pastel fills + white icon ── */
+html:not(.dark) .stat-blue   { background: #60a5fa; border-color: #3b82f6; }
+html:not(.dark) .stat-violet { background: #c4b5fd; border-color: #a78bfa; }
+html:not(.dark) .stat-emerald{ background: #6ee7b7; border-color: #34d399; }
+html:not(.dark) .stat-amber  { background: #fcd34d; border-color: #fbbf24; }

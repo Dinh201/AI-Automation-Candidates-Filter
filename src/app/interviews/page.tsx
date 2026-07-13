@@ -25,11 +25,21 @@ type Interview = {
 
 function statusConfig(status: string) {
   switch (status) {
-    case "Scheduled":    return { label: "Đã lên lịch", className: "bg-blue-500/15 text-blue-400", icon: <Clock className="w-3 h-3" /> };
-    case "Completed":    return { label: "Đã hoàn thành", className: "bg-green-500/15 text-green-400", icon: <CheckCircle2 className="w-3 h-3" /> };
-    case "Cancelled":    return { label: "Đã hủy", className: "bg-red-500/15 text-red-400", icon: <XCircle className="w-3 h-3" /> };
-    case "Rescheduled":  return { label: "Đổi lịch", className: "bg-amber-500/15 text-amber-400", icon: <AlertCircle className="w-3 h-3" /> };
-    default:             return { label: status, className: "bg-zinc-700/40 text-zinc-400", icon: null };
+    case "Scheduled":    return { label: "Đã lên lịch",   className: "bg-blue-500/20 text-blue-300 border border-blue-400/30",      icon: <Clock className="w-3 h-3" /> };
+    case "Completed":    return { label: "Đã hoàn thành", className: "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30", icon: <CheckCircle2 className="w-3 h-3" /> };
+    case "Cancelled":    return { label: "Đã hủy",        className: "bg-red-500/20 text-red-300 border border-red-400/30",          icon: <XCircle className="w-3 h-3" /> };
+    case "Rescheduled":  return { label: "Đổi lịch",      className: "bg-amber-500/20 text-amber-300 border border-amber-400/30",    icon: <AlertCircle className="w-3 h-3" /> };
+    default:             return { label: status,           className: "bg-zinc-600/30 text-zinc-300 border border-zinc-500/30",       icon: null };
+  }
+}
+
+function statusAccentColor(status: string) {
+  switch (status) {
+    case "Scheduled":   return "#3b82f6";
+    case "Completed":   return "#10b981";
+    case "Cancelled":   return "#ef4444";
+    case "Rescheduled": return "#f59e0b";
+    default:            return "#6366f1";
   }
 }
 
@@ -119,35 +129,43 @@ export default function InterviewsPage() {
 
   function InterviewCard({ iv }: { iv: Interview }) {
     const statusCfg = statusConfig(iv.status);
+    const accent = statusAccentColor(iv.status);
     const start = new Date(iv.start_time);
     const end = new Date(iv.end_time);
 
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+      <div style={{
+        background: `${accent}1a`,
+        border: `1px solid ${accent}40`,
+        borderLeft: `3px solid ${accent}`,
+        boxShadow: "var(--ats-card-shadow)",
+        borderRadius: "12px",
+        padding: "20px",
+      }} className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-semibold text-white">{iv.candidates?.name ?? "—"}</p>
-            <p className="text-xs text-zinc-400">{iv.candidates?.jobs?.title ?? "—"}</p>
+            <p className="font-semibold" style={{ color: "var(--ats-text-h)" }}>{iv.candidates?.name ?? "—"}</p>
+            <p className="text-xs" style={{ color: "var(--ats-text-muted)" }}>{iv.candidates?.jobs?.title ?? "—"}</p>
           </div>
           <div className="flex flex-col items-end gap-1.5">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusCfg.className}`}>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${statusCfg.className}`}>
               {statusCfg.icon}
               {statusCfg.label}
             </span>
             {iv.status === "Completed" && iv.candidates?.status === "Hired" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/25">
                 <UserCheck className="w-3 h-3" /> Đã tuyển
               </span>
             )}
             {iv.status === "Completed" && iv.candidates?.status === "Rejected" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/20">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/25">
                 <UserX className="w-3 h-3" /> Từ chối
               </span>
             )}
           </div>
         </div>
 
-        <div className="space-y-1.5 text-sm text-zinc-400">
+        <div className="space-y-1.5 text-sm" style={{ color: "var(--ats-text-body)" }}>
           <div className="flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 shrink-0" />
             {start.toLocaleDateString("vi-VN", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
@@ -164,7 +182,7 @@ export default function InterviewsPage() {
         </div>
 
         {iv.notes && (
-          <p className="text-xs text-zinc-500 border-t border-zinc-800 pt-3 line-clamp-2">{iv.notes}</p>
+          <p className="text-xs pt-3 line-clamp-2" style={{ color: "var(--ats-text-muted)", borderTop: "1px solid var(--ats-border)" }}>{iv.notes}</p>
         )}
 
         <div className="flex items-center gap-3 pt-1 flex-wrap">
@@ -188,7 +206,7 @@ export default function InterviewsPage() {
 
         {/* Hủy lịch — chỉ hiện cho interview sắp tới chưa qua */}
         {iv.status === "Scheduled" && new Date(iv.start_time) >= new Date() && (
-          <div className="border-t border-zinc-800 pt-3">
+          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3">
             <button
               onClick={() => cancelInterview(iv.id)}
               disabled={submitting === iv.id + "Cancel"}
@@ -202,8 +220,8 @@ export default function InterviewsPage() {
 
         {/* Outcome buttons — chỉ hiện cho interview đã qua và chưa ghi kết quả */}
         {iv.status === "Scheduled" && new Date(iv.start_time) < new Date() && (
-          <div className="border-t border-zinc-800 pt-3 space-y-2">
-            <p className="text-xs text-zinc-500">Ghi kết quả phỏng vấn:</p>
+          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3 space-y-2">
+            <p className="text-xs" style={{ color: "var(--ats-text-muted)" }}>Ghi kết quả phỏng vấn:</p>
             <div className="flex gap-2">
               <button
                 onClick={() => recordOutcome(iv.id, "Hired")}
@@ -232,8 +250,8 @@ export default function InterviewsPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-white">Lịch phỏng vấn</h1>
-        <p className="text-sm text-zinc-400 mt-0.5">
+        <h1 className="text-xl font-semibold" style={{ color: "var(--ats-text-h)" }}>Lịch phỏng vấn</h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--ats-text-body)" }}>
           {loading ? "Đang tải..." : `${interviews.length} buổi phỏng vấn`}
         </p>
       </div>
@@ -252,7 +270,7 @@ export default function InterviewsPage() {
           </div>
           <a
             href="/api/calendar/connect"
-            className="shrink-0 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+            className="shrink-0 px-4 py-2 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30 text-sm font-medium transition-colors"
           >
             Kết nối ngay
           </a>
@@ -278,16 +296,16 @@ export default function InterviewsPage() {
           <p className="text-sm text-zinc-500 mt-3">Đang tải lịch phỏng vấn...</p>
         </div>
       ) : interviews.length === 0 ? (
-        <div className="py-24 text-center bg-zinc-900 border border-zinc-800 rounded-xl">
-          <Calendar className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
-          <p className="text-sm font-medium text-zinc-400">Chưa có lịch phỏng vấn nào</p>
-          <p className="text-xs text-zinc-600 mt-1">Lên lịch từ trang chi tiết ứng viên</p>
+        <div className="py-24 text-center rounded-xl" style={{ background: "var(--ats-surface)", border: "1px solid var(--ats-border)" }}>
+          <Calendar className="w-10 h-10 mx-auto mb-3" style={{ color: "var(--ats-text-muted)" }} />
+          <p className="text-sm font-medium" style={{ color: "var(--ats-text-body)" }}>Chưa có lịch phỏng vấn nào</p>
+          <p className="text-xs mt-1" style={{ color: "var(--ats-text-muted)" }}>Lên lịch từ trang chi tiết ứng viên</p>
         </div>
       ) : (
         <div className="space-y-6">
           {upcoming.length > 0 && (
             <section>
-              <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--ats-text-muted)" }}>
                 Sắp diễn ra ({upcoming.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -297,10 +315,10 @@ export default function InterviewsPage() {
           )}
           {past.length > 0 && (
             <section>
-              <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--ats-text-muted)" }}>
                 Đã qua ({past.length})
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 opacity-70">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 opacity-85">
                 {past.map((iv) => <InterviewCard key={iv.id} iv={iv} />)}
               </div>
             </section>
