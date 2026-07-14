@@ -246,21 +246,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveError("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."); return; }
 
-    // Lưu họ tên vào user_profiles
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .update({ full_name: name.trim() })
-      .eq("id", user.id);
-    if (profileError) { setSaveError("Không thể lưu thông tin. Vui lòng thử lại."); return; }
-
-    // Đổi mật khẩu nếu có nhập
-    if (newPw) {
-      const { error: pwError } = await supabase.auth.updateUser({ password: newPw });
-      if (pwError) { setSaveError(pwError.message); return; }
-      setCurPw(""); setNewPw(""); setCnfPw("");
-    }
-
-    // Upload ảnh mới lên Supabase Storage nếu có
+    // Upload ảnh mới lên Supabase Storage (thực hiện trước, độc lập với profile update)
     if (avatarFileRef.current) {
       const file = avatarFileRef.current;
       const ext = file.name.split(".").pop() || "jpg";
@@ -278,12 +264,24 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
       const avatarWithCacheBust = `${publicUrl}?v=${Date.now()}`;
       await supabase
         .from("user_profiles")
-        .update({ avatar_url: avatarWithCacheBust })
-        .eq("id", user.id);
+        .upsert({ id: user.id, avatar_url: avatarWithCacheBust }, { onConflict: "id" });
       setAvatarUrl(avatarWithCacheBust);
       localStorage.setItem("ats_avatar", avatarWithCacheBust);
       window.dispatchEvent(new Event("ats_avatar_updated"));
       avatarFileRef.current = null;
+    }
+
+    // Lưu họ tên vào user_profiles (dùng upsert để tạo row nếu chưa có)
+    const { error: profileError } = await supabase
+      .from("user_profiles")
+      .upsert({ id: user.id, full_name: name.trim() }, { onConflict: "id" });
+    if (profileError) { setSaveError("Không thể lưu thông tin. Vui lòng thử lại."); return; }
+
+    // Đổi mật khẩu nếu có nhập
+    if (newPw) {
+      const { error: pwError } = await supabase.auth.updateUser({ password: newPw });
+      if (pwError) { setSaveError(pwError.message); return; }
+      setCurPw(""); setNewPw(""); setCnfPw("");
     }
 
     setSaved(true);
