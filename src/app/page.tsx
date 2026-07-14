@@ -308,8 +308,7 @@ export default async function DashboardPage() {
           </div>
           <Link
             href="/cv-analyzer"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-900 hover:bg-gray-700 transition-colors"
-            style={{ color: "white" }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ats-btn-primary"
           >
             Phân tích CV mới
           </Link>

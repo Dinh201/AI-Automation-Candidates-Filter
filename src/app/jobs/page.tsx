@@ -320,11 +320,7 @@ export default function JobsPage() {
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-all"
-          style={{
-            background: "linear-gradient(135deg, #1d4ed8, #2563eb)",
-            boxShadow: "0 2px 10px rgba(37,99,235,0.4)",
-          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold ats-btn-primary"
         >
           <Plus className="w-4 h-4" /> New position
         </button>
