@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ConditionalSidebar } from "@/components/conditional-sidebar";
+import { LanguageProvider } from "@/lib/i18n-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +33,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full flex" suppressHydrationWarning>
-        <ConditionalSidebar />
-        <main className="flex-1 min-w-0 overflow-auto">{children}</main>
+        <LanguageProvider>
+          <ConditionalSidebar />
+          <main className="flex-1 min-w-0 overflow-auto">{children}</main>
+        </LanguageProvider>
       </body>
     </html>
   );

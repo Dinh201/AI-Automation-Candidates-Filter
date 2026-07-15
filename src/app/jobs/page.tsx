@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { useTranslation } from "@/lib/i18n-context";
 
 type Rubric = {
   job_fit_weight: number;
@@ -67,19 +68,11 @@ const DEFAULT_FORM: FormState = {
   status: "Open",
 };
 
-const TABS: { label: string; value: string }[] = [
-  { label: "Đang tuyển", value: "Open" },
-  { label: "Đã đóng", value: "Closed" },
-];
-
-function statusConfig(status: string) {
+function statusClassName(status: string) {
   switch (status) {
-    case "Open":
-      return { label: "Đang tuyển", className: "bg-green-500/15 text-green-400 border-green-500/20" };
-    case "Closed":
-      return { label: "Đã đóng", className: "bg-red-500/15 text-red-400 border-red-500/20" };
-    default:
-      return { label: status, className: "bg-zinc-600/30 text-zinc-400 border-zinc-600/30" };
+    case "Open":   return "bg-green-500/15 text-green-400 border-green-500/20";
+    case "Closed": return "bg-red-500/15 text-red-400 border-red-500/20";
+    default:       return "bg-zinc-600/30 text-zinc-400 border-zinc-600/30";
   }
 }
 
@@ -165,6 +158,22 @@ function AutoResizeTextarea({
 }
 
 export default function JobsPage() {
+  const { t, lang } = useTranslation();
+  const locale = lang === "en" ? "en-US" : "vi-VN";
+
+  const TABS = [
+    { label: t("jobs.tabOpen"), value: "Open" },
+    { label: t("jobs.tabClosed"), value: "Closed" },
+  ];
+
+  function statusConfig(status: string) {
+    const labelMap: Record<string, string> = {
+      Open: t("jobs.statusOpen"),
+      Closed: t("jobs.statusClosed"),
+    };
+    return { label: labelMap[status] ?? status, className: statusClassName(status) };
+  }
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Open");
@@ -229,19 +238,19 @@ export default function JobsPage() {
     setFormError("");
 
     if (!form.title.trim()) {
-      setFormError("Vui lòng nhập tên vị trí tuyển dụng (*)");
+      setFormError(t("jobs.validationTitle"));
       return;
     }
     if (!stripHtml(form.description)) {
-      setFormError("Vui lòng nhập mô tả công việc (*)");
+      setFormError(t("jobs.validationDesc"));
       return;
     }
     if (!stripHtml(form.required_skills)) {
-      setFormError("Vui lòng nhập kỹ năng / yêu cầu công việc (*)");
+      setFormError(t("jobs.validationSkills"));
       return;
     }
     if (weightSum() !== 100) {
-      setFormError(`Tổng trọng số rubric phải bằng 100% (hiện tại: ${weightSum()}%)`);
+      setFormError(t("jobs.validationRubric").replace("%n%", String(weightSum())));
       return;
     }
 
@@ -281,7 +290,7 @@ export default function JobsPage() {
   }
 
   async function handleClose(jobId: string) {
-    if (!confirm("Đóng vị trí này? Ứng viên đã nộp sẽ không bị ảnh hưởng.")) return;
+    if (!confirm(t("jobs.closeJobConfirm"))) return;
     await fetch(`/api/jobs/${jobId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -313,16 +322,16 @@ export default function JobsPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Vị trí tuyển dụng</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t("jobs.title")}</h1>
           <p className="text-sm mt-0.5" style={{ color: "rgba(100,116,139,0.9)" }}>
-            Quản lý JD và cấu hình rubric chấm điểm AI
+            {t("jobs.manageDesc")}
           </p>
         </div>
         <button
           onClick={openCreate}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold ats-btn-primary"
         >
-          <Plus className="w-4 h-4" /> New position
+          <Plus className="w-4 h-4" /> {t("jobs.newPosition")}
         </button>
       </div>
 
@@ -363,18 +372,18 @@ export default function JobsPage() {
       {loading ? (
         <div className="py-20 text-center">
           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-zinc-500 mt-3">Đang tải...</p>
+          <p className="text-sm text-zinc-500 mt-3">{t("common.loading")}</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="glass-card py-16 text-center">
           <Briefcase className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-          <p className="text-sm text-zinc-500">Chưa có vị trí nào trong mục này</p>
+          <p className="text-sm text-zinc-500">{t("jobs.noJobs")}</p>
           {activeTab === "Open" && (
             <button
               onClick={openCreate}
               className="mt-4 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
             >
-              + Tạo vị trí đầu tiên
+              + {t("jobs.newPosition")}
             </button>
           )}
         </div>
@@ -412,7 +421,7 @@ export default function JobsPage() {
                         </span>
                       </div>
                       <span className="text-xs text-zinc-600">
-                        {new Date(job.created_at).toLocaleDateString("vi-VN")}
+                        {new Date(job.created_at).toLocaleDateString(locale)}
                       </span>
                     </div>
                   </div>
@@ -438,14 +447,14 @@ export default function JobsPage() {
                         onClick={() => handleReopen(job.id)}
                         className="px-2.5 py-1 rounded-lg text-xs text-green-400 hover:bg-green-500/10 transition-colors"
                       >
-                        Mở lại
+                        {t("jobs.reopen")}
                       </button>
                     ) : (
                       <button
                         onClick={() => handleClose(job.id)}
                         className="px-2.5 py-1 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
                       >
-                        Đóng
+                        {t("jobs.close")}
                       </button>
                     )}
                     <button
@@ -463,53 +472,49 @@ export default function JobsPage() {
                 {isExpanded && (
                   <div className="border-t border-zinc-800 px-5 py-5 space-y-5">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                      {/* Mô tả công việc */}
                       <div>
                         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                          <FileText className="w-3 h-3" /> Mô tả công việc
+                          <FileText className="w-3 h-3" /> {t("jobs.detail.description")}
                         </p>
                         <div className="job-html" dangerouslySetInnerHTML={{ __html: job.description }} />
                       </div>
 
-                      {/* Yêu cầu công việc */}
                       <div className="space-y-3">
                         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide flex items-center gap-1.5">
-                          <ClipboardList className="w-3 h-3" /> Yêu cầu công việc
+                          <ClipboardList className="w-3 h-3" /> {t("jobs.detail.requirements")}
                         </p>
                         {job.experience_requirement && (
                           <div>
-                            <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-1">Kinh nghiệm</p>
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-1">{t("jobs.detail.experience")}</p>
                             <p className="text-sm text-zinc-300">{job.experience_requirement}</p>
                           </div>
                         )}
                         <div>
-                          <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-1">Kỹ năng bắt buộc</p>
+                          <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-1">{t("jobs.detail.requiredSkills")}</p>
                           <div className="job-html" dangerouslySetInnerHTML={{ __html: job.required_skills }} />
                         </div>
                         {job.preferred_skills && (
                           <div>
-                            <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-1">Kỹ năng ưu tiên</p>
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-1">{t("jobs.detail.preferredSkills")}</p>
                             <div className="job-html" dangerouslySetInnerHTML={{ __html: job.preferred_skills }} />
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Phúc lợi */}
                     {job.benefits && (
                       <div>
                         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                          <Gift className="w-3 h-3" /> Phúc lợi
+                          <Gift className="w-3 h-3" /> {t("jobs.detail.benefits")}
                         </p>
                         <div className="job-html" dangerouslySetInnerHTML={{ __html: job.benefits }} />
                       </div>
                     )}
 
-                    {/* Rubric AI notes */}
                     {rubric.notes && (
                       <div>
                         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                          <SlidersHorizontal className="w-3 h-3" /> Hướng dẫn AI
+                          <SlidersHorizontal className="w-3 h-3" /> {t("jobs.detail.aiGuide")}
                         </p>
                         <div className="job-html italic" dangerouslySetInnerHTML={{ __html: rubric.notes }} />
                       </div>
@@ -522,7 +527,7 @@ export default function JobsPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                       >
-                        <ExternalLink className="w-3 h-3" /> Xem trang ứng tuyển
+                        <ExternalLink className="w-3 h-3" /> {t("jobs.viewApplyPage")}
                       </a>
                     </div>
                   </div>
@@ -546,10 +551,10 @@ export default function JobsPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
               <div>
                 <h2 className="text-base font-semibold text-white">
-                  {editingJob ? "Chỉnh sửa thông tin JD" : "Tạo JD mới"}
+                  {editingJob ? t("jobs.form.editTitle") : t("jobs.form.createTitle")}
                 </h2>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  {editingJob ? `ID: ${editingJob.id.slice(0, 8)}…` : "Điền đầy đủ thông tin để tạo JD"}
+                  {editingJob ? `ID: ${editingJob.id.slice(0, 8)}…` : t("jobs.form.jobTitlePlaceholder")}
                 </p>
               </div>
               <button
@@ -563,30 +568,26 @@ export default function JobsPage() {
             {/* ── Scrollable form ── */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-7">
 
-              {/* ════════════════════════════════
-                  1. TÊN VỊ TRÍ
-              ════════════════════════════════ */}
               <div className="space-y-4">
-                <SectionLabel icon={<Briefcase className="w-3.5 h-3.5" />}>Tên vị trí</SectionLabel>
+                <SectionLabel icon={<Briefcase className="w-3.5 h-3.5" />}>{t("jobs.form.jobTitle")}</SectionLabel>
 
                 <div>
-                  <FieldLabel required>Tên vị trí tuyển dụng</FieldLabel>
+                  <FieldLabel required>{t("jobs.form.jobTitle")}</FieldLabel>
                   <input
                     value={form.title}
                     onChange={(e) => set("title", e.target.value)}
-                    placeholder="VD: Frontend Developer, Product Manager, Data Analyst..."
+                    placeholder={t("jobs.form.jobTitlePlaceholder")}
                     className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/60 transition-colors"
                   />
                 </div>
 
-                {/* Trạng thái Open / Close */}
                 <div>
-                  <FieldLabel>Trạng thái đăng tuyển</FieldLabel>
+                  <FieldLabel>{t("jobs.form.statusLabel")}</FieldLabel>
                   <div className="flex gap-2">
                     {([
-                      { value: "Open", label: "Open — Đang tuyển", desc: "Ứng viên có thể nộp hồ sơ" },
-                      { value: "Closed", label: "Close — Đã đóng", desc: "Ngừng nhận hồ sơ" },
-                    ] as const).map((s) => (
+                      { value: "Open" as const, label: t("jobs.form.statusOpenLabel"), desc: t("jobs.form.statusOpenDesc") },
+                      { value: "Closed" as const, label: t("jobs.form.statusClosedLabel"), desc: t("jobs.form.statusClosedDesc") },
+                    ]).map((s) => (
                       <button
                         key={s.value}
                         type="button"
@@ -606,94 +607,82 @@ export default function JobsPage() {
                 </div>
               </div>
 
-              {/* ════════════════════════════════
-                  2. MÔ TẢ CÔNG VIỆC
-              ════════════════════════════════ */}
               <div className="space-y-4">
-                <SectionLabel icon={<FileText className="w-3.5 h-3.5" />}>Mô tả công việc</SectionLabel>
+                <SectionLabel icon={<FileText className="w-3.5 h-3.5" />}>{t("jobs.form.description")}</SectionLabel>
 
                 <div>
-                  <FieldLabel required>Nội dung mô tả</FieldLabel>
+                  <FieldLabel required>{t("jobs.form.descriptionContent")}</FieldLabel>
                   <RichTextEditor
                     value={form.description}
                     onChange={(v) => set("description", v)}
-                    placeholder="Mô tả tổng quan vị trí, trách nhiệm chính, môi trường làm việc..."
+                    placeholder={t("jobs.form.jobTitlePlaceholder")}
                     minHeight="150px"
                   />
                 </div>
               </div>
 
-              {/* ════════════════════════════════
-                  3. YÊU CẦU CÔNG VIỆC
-              ════════════════════════════════ */}
               <div className="space-y-4">
-                <SectionLabel icon={<ClipboardList className="w-3.5 h-3.5" />}>Yêu cầu công việc</SectionLabel>
+                <SectionLabel icon={<ClipboardList className="w-3.5 h-3.5" />}>{t("jobs.form.requirements")}</SectionLabel>
                 <div>
-                  <FieldLabel>Kinh nghiệm yêu cầu</FieldLabel>
+                  <FieldLabel>{t("jobs.form.experience")}</FieldLabel>
                   <RichTextEditor
                     value={form.required_skills}
                     onChange={(v) => set("required_skills", v)}
-                    placeholder="VD: React, TypeScript, REST API, Git... (dùng bullet để liệt kê rõ hơn)"
+                    placeholder={t("jobs.form.requiredSkillsPlaceholder")}
                     minHeight="110px"
                   />
                 </div>
               </div>
 
-              {/* ════════════════════════════════
-                  4. PHÚC LỢI
-              ════════════════════════════════ */}
               <div className="space-y-4">
-                <SectionLabel icon={<Gift className="w-3.5 h-3.5" />}>Phúc lợi</SectionLabel>
+                <SectionLabel icon={<Gift className="w-3.5 h-3.5" />}>{t("jobs.form.benefits")}</SectionLabel>
 
                 <div>
-                  <FieldLabel>Chế độ đãi ngộ & Phúc lợi <span className="text-zinc-600 font-normal">(không bắt buộc)</span></FieldLabel>
+                  <FieldLabel>{t("jobs.form.benefitsLabel")} <span className="text-zinc-600 font-normal">{t("jobs.form.optional")}</span></FieldLabel>
                   <RichTextEditor
                     value={form.benefits}
                     onChange={(v) => set("benefits", v)}
-                    placeholder="VD: Lương thỏa thuận theo năng lực, thưởng KPI, BHXH đầy đủ, làm việc hybrid..."
+                    placeholder={t("jobs.form.benefitsPlaceholder")}
                     minHeight="110px"
                   />
                 </div>
               </div>
 
-              {/* ════════════════════════════════
-                  5. RUBRIC CHẤM ĐIỂM AI
-              ════════════════════════════════ */}
               <div className="space-y-4">
-                <SectionLabel icon={<SlidersHorizontal className="w-3.5 h-3.5" />}>Rubric chấm điểm AI</SectionLabel>
+                <SectionLabel icon={<SlidersHorizontal className="w-3.5 h-3.5" />}>{t("jobs.form.scoringRubric")}</SectionLabel>
 
                 <div className="p-4 bg-zinc-900/60 rounded-xl border border-zinc-800 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-zinc-400">Tổng trọng số phải bằng 100%</p>
+                    <p className="text-xs text-zinc-400">{t("jobs.rubricMustBe100")}</p>
                     <span
                       className={`text-xs font-bold px-2.5 py-1 rounded-lg ${weightSum() === 100
                           ? "bg-green-500/15 text-green-400"
                           : "bg-red-500/15 text-red-400"
                         }`}
                     >
-                      Tổng: {weightSum()}%
+                      {t("jobs.rubricTotal")}: {weightSum()}%
                     </span>
                   </div>
 
                   {[
                     {
                       key: "job_fit_weight" as const,
-                      label: "Job Fit",
-                      desc: "Phù hợp kỹ năng & kinh nghiệm",
+                      label: t("jobs.form.jobFitWeight"),
+                      desc: t("jobs.form.jobFitDesc"),
                       color: "text-blue-400",
                       bar: "bg-blue-500",
                     },
                     {
                       key: "potential_weight" as const,
-                      label: "Potential",
-                      desc: "Tiềm năng phát triển",
+                      label: t("jobs.form.potentialWeight"),
+                      desc: t("jobs.form.potentialDesc"),
                       color: "text-purple-400",
                       bar: "bg-purple-500",
                     },
                     {
                       key: "cultural_fit_weight" as const,
-                      label: "Cultural Fit",
-                      desc: "Phù hợp văn hóa công ty",
+                      label: t("jobs.form.culturalFitWeight"),
+                      desc: t("jobs.form.culturalDesc"),
                       color: "text-amber-400",
                       bar: "bg-amber-500",
                     },
@@ -727,11 +716,11 @@ export default function JobsPage() {
                 </div>
 
                 <div>
-                  <FieldLabel>Hướng dẫn bổ sung cho AI <span className="text-zinc-600 font-normal">(không bắt buộc)</span></FieldLabel>
+                  <FieldLabel>{t("jobs.form.aiGuideLabel")} <span className="text-zinc-600 font-normal">{t("jobs.form.optional")}</span></FieldLabel>
                   <RichTextEditor
                     value={form.rubric_notes}
                     onChange={(v) => set("rubric_notes", v)}
-                    placeholder="VD: Ưu tiên ứng viên có kinh nghiệm startup, cần tiếng Anh tốt..."
+                    placeholder={t("jobs.form.rubricNotesPlaceholder")}
                     minHeight="80px"
                   />
                 </div>
@@ -752,14 +741,14 @@ export default function JobsPage() {
                   onClick={() => setModalOpen(false)}
                   className="flex-1 py-2.5 rounded-xl border border-zinc-700 text-zinc-400 text-sm font-medium hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
                 >
-                  Hủy
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? "Đang lưu..." : editingJob ? "Cập nhật vị trí" : "Tạo vị trí"}
+                  {saving ? t("jobs.saving") : editingJob ? t("jobs.form.update") : t("jobs.form.submit")}
                 </button>
               </div>
             </form>

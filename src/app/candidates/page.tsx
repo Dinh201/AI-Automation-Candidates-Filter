@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Users, Search, Filter, ArrowUpDown, ExternalLink, Trash2, Mail, CheckCircle2, AlertCircle, RefreshCw, X } from "lucide-react";
 
 import { CandidateScoringResult } from "@/services/ai/schema";
+import { useTranslation } from "@/lib/i18n-context";
 
 type Candidate = {
   id: string;
@@ -17,8 +18,8 @@ type Candidate = {
   jobs: { title: string } | null;
 };
 
-const DECISION_OPTIONS = ["Tất cả", "STRONG HIRE", "HIRE", "CONSIDER", "REJECT"];
-const STATUS_OPTIONS = ["Tất cả", "New", "Scoring", "Scored", "Interviewing", "Hired", "Rejected"];
+const DECISION_VALUES = ["", "STRONG HIRE", "HIRE", "CONSIDER", "REJECT"];
+const STATUS_VALUES = ["", "New", "Scoring", "Scored", "Interviewing", "Hired", "Rejected"];
 
 function decisionConfig(decision?: string) {
   switch (decision) {
@@ -35,15 +36,15 @@ function decisionConfig(decision?: string) {
   }
 }
 
-function statusConfig(status: string) {
+function statusClassName(status: string) {
   switch (status) {
-    case "Scored":       return { label: "Đã chấm điểm", className: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400" };
-    case "Scoring":      return { label: "Đang chấm...",  className: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400" };
-    case "New":          return { label: "Mới",           className: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400" };
-    case "Interviewing": return { label: "Phỏng vấn",     className: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400" };
-    case "Hired":        return { label: "Đã tuyển",      className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" };
-    case "Rejected":     return { label: "Từ chối",       className: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" };
-    default:             return { label: status,          className: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400" };
+    case "Scored":       return "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400";
+    case "Scoring":      return "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400";
+    case "New":          return "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400";
+    case "Interviewing": return "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400";
+    case "Hired":        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400";
+    case "Rejected":     return "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400";
+    default:             return "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400";
   }
 }
 
@@ -70,11 +71,25 @@ type GmailStatus = "connected_oauth" | "connected_env" | "disconnected" | "unkno
 type ScanResult = { processed: number; created: number } | null;
 
 export default function CandidatesPage() {
+  const { t, lang } = useTranslation();
+  const locale = lang === "en" ? "en-US" : "vi-VN";
+
+  function statusConfig(status: string) {
+    const labelMap: Record<string, string> = {
+      Scored: t("status.scored"),
+      Scoring: t("status.scoring"),
+      New: t("status.new"),
+      Interviewing: t("status.interviewing"),
+      Hired: t("status.hired"),
+      Rejected: t("status.rejected"),
+    };
+    return { label: labelMap[status] ?? status, className: statusClassName(status) };
+  }
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Tất cả");
-  const [decisionFilter, setDecisionFilter] = useState("Tất cả");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [decisionFilter, setDecisionFilter] = useState("");
   const [sortBy, setSortBy] = useState<"created_at" | "total_score">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -127,7 +142,7 @@ export default function CandidatesPage() {
       const res = await fetch("/api/gmail/scan", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setScanError(data.error ?? "Quét Gmail thất bại");
+        setScanError(data.error ?? t("candidates.scanFailed"));
       } else {
         setScanResult({ processed: data.processed ?? 0, created: data.created ?? 0 });
         if ((data.created ?? 0) > 0) {
@@ -137,14 +152,14 @@ export default function CandidatesPage() {
         }
       }
     } catch {
-      setScanError("Không kết nối được với server");
+      setScanError(t("candidates.serverError"));
     } finally {
       setScanning(false);
     }
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Xóa ứng viên "${name}"?\nHành động này không thể hoàn tác.`)) return;
+    if (!confirm(`${t("candidates.deleteConfirmPrefix")}${name}${t("candidates.deleteConfirmSuffix")}`)) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/candidates/${id}`, { method: "DELETE" });
@@ -159,7 +174,7 @@ export default function CandidatesPage() {
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
-    if (!confirm(`Xóa ${ids.length} ứng viên đã chọn?\nHành động này không thể hoàn tác.`)) return;
+    if (!confirm(`${t("candidates.bulkDeletePrefix")}${ids.length}${t("candidates.bulkDeleteSuffix")}`)) return;
     setBulkDeleting(true);
     try {
       const res = await fetch("/api/candidates", {
@@ -189,11 +204,11 @@ export default function CandidatesPage() {
       );
     }
 
-    if (statusFilter !== "Tất cả") {
+    if (statusFilter !== "") {
       list = list.filter((c) => c.status === statusFilter);
     }
 
-    if (decisionFilter !== "Tất cả") {
+    if (decisionFilter !== "") {
       list = list.filter((c) => c.ai_score_result?.final_decision === decisionFilter);
     }
 
@@ -247,10 +262,10 @@ export default function CandidatesPage() {
   };
 
   const PIPELINE_STAGES = [
-    { key: "new",          label: "Nhận CV",     count: pipelineCounts.new,          cardCls: "pipe-card-recv" },
-    { key: "scored",       label: "Sàng lọc AI", count: pipelineCounts.scored,       cardCls: "pipe-card-ai"   },
-    { key: "interviewing", label: "Phỏng vấn",   count: pipelineCounts.interviewing, cardCls: "pipe-card-iv"   },
-    { key: "closed",       label: "Kết quả",     count: pipelineCounts.closed,       cardCls: "pipe-card-res"  },
+    { key: "new",          label: t("candidates.pipeline.receive"),  count: pipelineCounts.new,          cardCls: "pipe-card-recv" },
+    { key: "scored",       label: t("candidates.pipeline.aiScreen"), count: pipelineCounts.scored,       cardCls: "pipe-card-ai"   },
+    { key: "interviewing", label: t("candidates.pipeline.interview"),count: pipelineCounts.interviewing, cardCls: "pipe-card-iv"   },
+    { key: "closed",       label: t("candidates.pipeline.result"),   count: pipelineCounts.closed,       cardCls: "pipe-card-res"  },
   ];
 
   return (
@@ -258,16 +273,16 @@ export default function CandidatesPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight ats-text-h">Ứng viên</h1>
+          <h1 className="text-2xl font-bold tracking-tight ats-text-h">{t("candidates.title")}</h1>
           <p className="text-sm mt-0.5 ats-text-muted">
-            {loading ? "Đang tải..." : `${filtered.length} / ${candidates.length} ứng viên`}
+            {loading ? t("common.loading") : `${filtered.length} / ${candidates.length} ${t("candidates.title").toLowerCase()}`}
           </p>
         </div>
         <Link
           href="/cv-analyzer"
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ats-btn-primary"
         >
-          + Phân tích CV mới
+          {t("candidates.newCv")}
         </Link>
       </div>
 
@@ -312,7 +327,7 @@ export default function CandidatesPage() {
         <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-700 dark:text-green-300">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            Gmail đã kết nối thành công! Bạn có thể quét hộp thư ngay bây giờ.
+            {t("candidates.gmail.successBanner")}
           </div>
           <button onClick={() => setShowGmailBanner(null)} className="text-green-500/60 hover:text-green-700 dark:hover:text-green-300 transition-colors">
             <X className="w-4 h-4" />
@@ -323,7 +338,7 @@ export default function CandidatesPage() {
         <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-700 dark:text-red-300">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            Kết nối Gmail thất bại. Vui lòng thử lại.
+            {t("candidates.gmail.errorBanner")}
           </div>
           <button onClick={() => setShowGmailBanner(null)} className="text-red-500/60 hover:text-red-700 dark:hover:text-red-300 transition-colors">
             <X className="w-4 h-4" />
@@ -337,17 +352,15 @@ export default function CandidatesPage() {
           <div className="flex items-start gap-3">
             <Mail className="w-5 h-5 ats-text-muted shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium ats-text-h">Kết nối Gmail để quét CV tự động</p>
-              <p className="text-xs ats-text-muted mt-0.5">
-                Hệ thống sẽ đọc hộp thư, tìm email có đính kèm CV (PDF) và tạo ứng viên tự động.
-              </p>
+              <p className="text-sm font-medium ats-text-h">{t("candidates.gmail.connectTitle")}</p>
+              <p className="text-xs ats-text-muted mt-0.5">{t("candidates.gmail.connectDesc")}</p>
             </div>
           </div>
           <a
             href="/api/gmail/connect?return_to=/candidates"
             className="shrink-0 px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-slate-800 dark:text-white text-sm font-medium transition-colors whitespace-nowrap"
           >
-            Kết nối Gmail
+            {t("candidates.gmail.connectBtn")}
           </a>
         </div>
       )}
@@ -357,12 +370,12 @@ export default function CandidatesPage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 shrink-0" />
-              <span className="text-sm ats-text-h font-medium">Gmail đã kết nối</span>
+              <span className="text-sm ats-text-h font-medium">{t("candidates.gmail.connected")}</span>
             </div>
             {gmailStatus === "connected_env"}
             {scanResult && (
               <span className="text-xs ats-text-muted">
-                — Vừa quét: {scanResult.processed} email, tạo mới {scanResult.created} ứng viên
+                {t("candidates.gmail.scanResultPrefix")} {scanResult.processed} {t("candidates.gmail.emailsCount")} {scanResult.created} {t("candidates.gmail.candidatesCount")}
               </span>
             )}
             {scanError && (
@@ -377,7 +390,7 @@ export default function CandidatesPage() {
                 href="/api/gmail/connect?return_to=/candidates"
                 className="text-xs ats-text-muted hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
               >
-                Kết nối lại
+                {t("candidates.gmail.reconnect")}
               </a>
             )}
             <button
@@ -386,7 +399,7 @@ export default function CandidatesPage() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium transition-colors whitespace-nowrap"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
-              {scanning ? "Đang quét..." : "Quét Gmail ngay"}
+              {scanning ? t("candidates.gmail.scanning") : t("candidates.gmail.scanNow")}
             </button>
           </div>
         </div>
@@ -399,7 +412,7 @@ export default function CandidatesPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm theo tên, email, vị trí..."
+            placeholder={t("candidates.search")}
             className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
           />
         </div>
@@ -410,7 +423,18 @@ export default function CandidatesPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
           >
-            {STATUS_OPTIONS.map((o) => <option key={o} value={o} className="bg-white dark:bg-slate-900">{o}</option>)}
+            {STATUS_VALUES.map((v) => {
+              const labels: Record<string, string> = {
+                "": t("common.all"),
+                New: t("status.new"),
+                Scoring: t("status.scoring"),
+                Scored: t("status.scored"),
+                Interviewing: t("status.interviewing"),
+                Hired: t("status.hired"),
+                Rejected: t("status.rejected"),
+              };
+              return <option key={v} value={v} className="bg-white dark:bg-slate-900">{labels[v] ?? v}</option>;
+            })}
           </select>
         </div>
         <select
@@ -418,9 +442,9 @@ export default function CandidatesPage() {
           onChange={(e) => setDecisionFilter(e.target.value)}
           className="bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
         >
-          {DECISION_OPTIONS.map((o) => (
-            <option key={o} value={o} className="bg-white dark:bg-slate-900">
-              {o === "Tất cả" ? "Quyết định: Tất cả" : o}
+          {DECISION_VALUES.map((v) => (
+            <option key={v} value={v} className="bg-white dark:bg-slate-900">
+              {v === "" ? t("common.all") : v}
             </option>
           ))}
         </select>
@@ -430,14 +454,14 @@ export default function CandidatesPage() {
       {someSelected && (
         <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
           <span className="text-sm text-indigo-300">
-            Đã chọn <span className="font-semibold">{selectedIds.size}</span> ứng viên
+            <span className="font-semibold">{selectedIds.size}</span>{t("candidates.selectedCount")}
           </span>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedIds(new Set())}
               className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
             >
-              Bỏ chọn tất cả
+              {t("candidates.deselectAll")}
             </button>
             <button
               onClick={handleBulkDelete}
@@ -445,7 +469,7 @@ export default function CandidatesPage() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/20 text-xs font-medium hover:bg-red-500/25 transition-colors disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              {bulkDeleting ? "Đang xóa..." : `Xóa ${selectedIds.size} ứng viên`}
+              {bulkDeleting ? t("candidates.actionDeleting") : `${t("candidates.deleteSelected")} ${selectedIds.size}`}
             </button>
           </div>
         </div>
@@ -456,12 +480,12 @@ export default function CandidatesPage() {
         {loading ? (
           <div className="py-20 text-center">
             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-sm ats-text-muted mt-3">Đang tải dữ liệu...</p>
+            <p className="text-sm ats-text-muted mt-3">{t("candidates.loadingTable")}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center">
             <Users className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
-            <p className="text-sm ats-text-muted">Không tìm thấy ứng viên nào</p>
+            <p className="text-sm ats-text-muted">{candidates.length === 0 ? t("candidates.noData") : t("candidates.noResults")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -476,22 +500,22 @@ export default function CandidatesPage() {
                       className="w-3.5 h-3.5 rounded accent-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Ứng viên</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Vị trí</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Trạng thái</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.name")}</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.position")}</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.status")}</th>
                   <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">
                     <button onClick={() => toggleSort("total_score")} className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
-                      Tổng điểm <ArrowUpDown className="w-3 h-3" />
+                      {t("candidates.col.score")} <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Job Fit</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Potential</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Cultural</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Quyết định</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">Độ tin cậy</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.jobFit")}</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.potential")}</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.cultural")}</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.decision")}</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">{t("candidates.col.confidence")}</th>
                   <th className="px-3 py-3 text-left text-xs font-medium ats-text-muted">
                     <button onClick={() => toggleSort("created_at")} className="flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
-                      Ngày <ArrowUpDown className="w-3 h-3" />
+                      {t("candidates.col.date")} <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
                   <th className="px-3 py-3" />
@@ -541,7 +565,7 @@ export default function CandidatesPage() {
                         </span>
                       </td>
                       <td className="px-3 py-3 ats-text-muted text-xs whitespace-nowrap">
-                        {new Date(c.created_at).toLocaleDateString("vi-VN")}
+                        {new Date(c.created_at).toLocaleDateString(locale)}
                       </td>
                       <td className="px-3 py-3">
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-3">
@@ -549,7 +573,7 @@ export default function CandidatesPage() {
                             href={`/candidates/${c.id}`}
                             className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300"
                           >
-                            <ExternalLink className="w-3 h-3" /> Chi tiết
+                            <ExternalLink className="w-3 h-3" /> {t("candidates.actionDetail")}
                           </Link>
                           <button
                             onClick={() => handleDelete(c.id, c.name)}
@@ -557,7 +581,7 @@ export default function CandidatesPage() {
                             className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-400 disabled:opacity-40"
                           >
                             <Trash2 className="w-3 h-3" />
-                            {deletingId === c.id ? "Đang xóa..." : "Xóa"}
+                            {deletingId === c.id ? t("candidates.actionDeleting") : t("candidates.deleteSelected")}
                           </button>
                         </div>
                       </td>

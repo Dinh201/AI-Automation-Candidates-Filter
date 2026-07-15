@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Clock, User, ExternalLink } from "lucide-react";
+import { useTranslation } from "@/lib/i18n-context";
 
 type Interview = {
   id: string;
@@ -22,8 +23,6 @@ const STATUS_COLOR: Record<string, string> = {
   Rescheduled: "bg-amber-500/20 border-amber-500/40 text-amber-300",
 };
 
-const DOW = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
@@ -33,7 +32,7 @@ function isSameDay(a: Date, b: Date) {
 function buildCalendarDays(year: number, month: number): (Date | null)[] {
   const first = new Date(year, month, 1);
   const last  = new Date(year, month + 1, 0);
-  const startDow = first.getDay(); // 0=Sun
+  const startDow = first.getDay();
   const days: (Date | null)[] = [];
   for (let i = 0; i < startDow; i++) days.push(null);
   for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d));
@@ -41,12 +40,28 @@ function buildCalendarDays(year: number, month: number): (Date | null)[] {
 }
 
 export default function CalendarPage() {
+  const { t, lang } = useTranslation();
+  const locale = lang === "en" ? "en-US" : "vi-VN";
+
   const today = new Date();
   const [year, setYear]   = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Date | null>(null);
+
+  // Generate locale-aware short weekday names starting from Sunday
+  const DOW = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(2023, 0, i + 1); // Jan 1 2023 is Sunday
+    return d.toLocaleDateString(locale, { weekday: "short" });
+  });
+
+  const statusLabels: Record<string, string> = {
+    Scheduled:   t("interviews.status.scheduled"),
+    Completed:   t("interviews.status.completed"),
+    Cancelled:   t("interviews.status.cancelled"),
+    Rescheduled: t("interviews.status.rescheduled"),
+  };
 
   useEffect(() => {
     fetch("/api/interviews")
@@ -73,22 +88,24 @@ export default function CalendarPage() {
   }
 
   const selectedDayInterviews = selected ? interviewsOnDay(selected) : [];
+  const upcomingCount = interviews.filter(iv => iv.status === "Scheduled" && new Date(iv.start_time) >= today).length;
+
+  const monthLabel = new Date(year, month, 1).toLocaleDateString(locale, { month: "long", year: "numeric" });
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Lịch phỏng vấn</h1>
+          <h1 className="text-xl font-semibold text-white">{t("calendar.title")}</h1>
           <p className="text-sm text-zinc-400 mt-0.5">
-            {loading ? "Đang tải..." : `${interviews.filter(iv => iv.status === "Scheduled" && new Date(iv.start_time) >= today).length} buổi sắp tới`}
+            {loading ? t("common.loading") : `${upcomingCount} ${t("calendar.upcomingSuffix")}`}
           </p>
         </div>
         <Link
           href="/interviews"
           className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-lg transition-colors"
         >
-          Xem danh sách →
+          {t("calendar.viewList")}
         </Link>
       </div>
 
@@ -100,9 +117,7 @@ export default function CalendarPage() {
             <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <h2 className="text-sm font-semibold text-white">
-              Tháng {month + 1} / {year}
-            </h2>
+            <h2 className="text-sm font-semibold text-white capitalize">{monthLabel}</h2>
             <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -144,12 +159,12 @@ export default function CalendarPage() {
                         key={iv.id}
                         className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate ${STATUS_COLOR[iv.status] ?? STATUS_COLOR.Scheduled}`}
                       >
-                        {new Date(iv.start_time).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(iv.start_time).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
                         {" "}{iv.candidates?.name ?? "—"}
                       </div>
                     ))}
                     {ivs.length > 2 && (
-                      <div className="text-[10px] text-zinc-500 px-1">+{ivs.length - 2} nữa</div>
+                      <div className="text-[10px] text-zinc-500 px-1">+{ivs.length - 2} {t("calendar.more")}</div>
                     )}
                   </div>
                 </button>
@@ -162,16 +177,11 @@ export default function CalendarPage() {
         <div className="space-y-4">
           {/* Legend */}
           <div className="glass-card p-4 space-y-2">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Chú thích</p>
-            {[
-              ["Scheduled",   "Đã lên lịch"],
-              ["Completed",   "Đã hoàn thành"],
-              ["Cancelled",   "Đã hủy"],
-              ["Rescheduled", "Đổi lịch"],
-            ].map(([status, label]) => (
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t("calendar.legend")}</p>
+            {(["Scheduled", "Completed", "Cancelled", "Rescheduled"] as const).map((status) => (
               <div key={status} className="flex items-center gap-2">
                 <span className={`w-3 h-3 rounded border ${STATUS_COLOR[status]}`} />
-                <span className="text-xs text-zinc-400">{label}</span>
+                <span className="text-xs text-zinc-400">{statusLabels[status]}</span>
               </div>
             ))}
           </div>
@@ -180,17 +190,19 @@ export default function CalendarPage() {
           {selected ? (
             <div className="glass-card overflow-hidden">
               <div className="px-4 py-3 border-b border-white/[0.06]">
-                <p className="text-sm font-semibold text-white">
-                  {selected.toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long" })}
+                <p className="text-sm font-semibold text-white capitalize">
+                  {selected.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}
                 </p>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  {selectedDayInterviews.length === 0 ? "Không có lịch" : `${selectedDayInterviews.length} buổi phỏng vấn`}
+                  {selectedDayInterviews.length === 0
+                    ? t("calendar.noSchedule")
+                    : `${selectedDayInterviews.length} ${t("interviews.interviewCount")}`}
                 </p>
               </div>
 
               {selectedDayInterviews.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-zinc-600">Ngày trống</p>
+                  <p className="text-sm text-zinc-600">{t("calendar.emptyDay")}</p>
                 </div>
               ) : (
                 <ul className="divide-y divide-white/[0.04]">
@@ -205,18 +217,15 @@ export default function CalendarPage() {
                             <p className="text-xs text-zinc-500">{iv.candidates?.jobs?.title ?? "—"}</p>
                           </div>
                           <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded border ${STATUS_COLOR[iv.status] ?? STATUS_COLOR.Scheduled}`}>
-                            {iv.status === "Scheduled" ? "Đã lên lịch"
-                              : iv.status === "Completed" ? "Hoàn thành"
-                              : iv.status === "Cancelled" ? "Đã hủy"
-                              : "Đổi lịch"}
+                            {statusLabels[iv.status] ?? iv.status}
                           </span>
                         </div>
 
                         <div className="space-y-1 text-xs text-zinc-400">
                           <div className="flex items-center gap-1.5">
                             <Clock className="w-3 h-3" />
-                            {start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} –{" "}
-                            {end.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                            {start.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })} –{" "}
+                            {end.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
                           </div>
                           <div className="flex items-center gap-1.5">
                             <User className="w-3 h-3" />
@@ -229,7 +238,7 @@ export default function CalendarPage() {
                             href={`/candidates/${iv.candidate_id}`}
                             className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                           >
-                            <ExternalLink className="w-3 h-3" /> Hồ sơ
+                            <ExternalLink className="w-3 h-3" /> {t("interviews.candidateProfile")}
                           </Link>
                           {iv.meet_link && (
                             <a
@@ -250,7 +259,7 @@ export default function CalendarPage() {
             </div>
           ) : (
             <div className="glass-card p-6 text-center">
-              <p className="text-sm text-zinc-500">Chọn một ngày để xem chi tiết</p>
+              <p className="text-sm text-zinc-500">{t("calendar.selectDay")}</p>
             </div>
           )}
         </div>

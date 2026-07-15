@@ -16,30 +16,7 @@ import {
 } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import { StarLogo } from "./star-logo";
-
-const navGroups = [
-  {
-    label: "Tổng quan",
-    items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
-    ],
-  },
-  {
-    label: "Tuyển dụng",
-    items: [
-      { href: "/candidates", label: "Ứng viên",          icon: Users,        exact: false },
-      { href: "/jobs",       label: "Vị trí tuyển dụng", icon: Briefcase,    exact: false },
-      { href: "/cv-analyzer",label: "Phân tích CV",      icon: ScanSearch,   exact: false },
-    ],
-  },
-  {
-    label: "Lịch hẹn",
-    items: [
-      { href: "/interviews", label: "Phỏng vấn",  icon: Calendar,    exact: false },
-      { href: "/calendar",   label: "Xem lịch",   icon: CalendarDays, exact: false },
-    ],
-  },
-];
+import { useTranslation } from "@/lib/i18n-context";
 
 const AVATAR_CSS = `
   @keyframes av-spin { to { transform: rotate(360deg); } }
@@ -77,8 +54,33 @@ type UserProfile = {
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
   const prevPathRef = useRef<string>("/");
   const isSettings = pathname === "/settings";
+
+  const navGroups = [
+    {
+      label: t("sidebar.overview"),
+      items: [
+        { href: "/", label: t("sidebar.dashboard"), icon: LayoutDashboard, exact: true },
+      ],
+    },
+    {
+      label: t("sidebar.recruitment"),
+      items: [
+        { href: "/candidates",  label: t("sidebar.candidates"),    icon: Users,        exact: false },
+        { href: "/jobs",        label: t("sidebar.jobPositions"),  icon: Briefcase,    exact: false },
+        { href: "/cv-analyzer", label: t("sidebar.cvAnalysis"),    icon: ScanSearch,   exact: false },
+      ],
+    },
+    {
+      label: t("sidebar.scheduling"),
+      items: [
+        { href: "/interviews", label: t("sidebar.interviews"), icon: Calendar,    exact: false },
+        { href: "/calendar",   label: t("sidebar.calendar"),   icon: CalendarDays, exact: false },
+      ],
+    },
+  ];
   const [profileHover, setProfileHover] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     name: "...",
@@ -258,7 +260,7 @@ export function Sidebar() {
             className="w-4 h-4 shrink-0 transition-colors"
             style={{ color: isSettings ? "var(--sb-nav-active-icon)" : "rgba(100,116,139,1)" }}
           />
-          <span className="flex-1 text-left">Cài đặt</span>
+          <span className="flex-1 text-left">{t("sidebar.settings")}</span>
           {isSettings && (
             <ChevronRight className="w-3 h-3 opacity-50" style={{ color: "var(--sb-nav-active-icon)" }} />
           )}

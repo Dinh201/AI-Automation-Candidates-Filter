@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  User, Palette, Bell, Brain, CalendarDays, Mail,
+  User, Palette, Bell, CalendarDays, Mail,
   Sun, Moon, Monitor, Clock,
-  Eye, EyeOff, Save, Plus, Check,
-  Lock, Link2, X, Upload,
+  Eye, EyeOff, Save, Check,
+  Lock, X, Upload,
 } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
+import { useTranslation } from "@/lib/i18n-context";
 
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const PAGE_CSS = `
@@ -153,6 +154,7 @@ function ToggleRow({
 
 /* ─── SaveBar ─────────────────────────────────────────────────────── */
 function SaveBar({ onSave, saved }: { onSave: () => void; saved: boolean }) {
+  const { t } = useTranslation();
   return (
     <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8 }}>
       <button
@@ -168,7 +170,7 @@ function SaveBar({ onSave, saved }: { onSave: () => void; saved: boolean }) {
         }}
       >
         {saved ? <Check size={14} /> : <Save size={14} />}
-        {saved ? "Đã lưu" : "Lưu thay đổi"}
+        {saved ? t("settings.saved") : t("settings.save")}
       </button>
     </div>
   );
@@ -177,6 +179,7 @@ function SaveBar({ onSave, saved }: { onSave: () => void; saved: boolean }) {
 /* ══════════════════════ PANELS ══════════════════════════════════════ */
 
 function ProfilePanel({ initials, name: initName, email }: { initials: string; name: string; email: string }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(initName);
   const [showCur, setShowCur] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -217,11 +220,11 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setAvatarError("Chỉ chấp nhận file ảnh (JPG, PNG, WEBP).");
+      setAvatarError(t("settings.profile.avatarTypeError"));
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setAvatarError("Ảnh quá lớn. Tối đa 2MB.");
+      setAvatarError(t("settings.profile.avatarSizeError"));
       return;
     }
     setAvatarError(null);
@@ -237,14 +240,14 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
 
     // Validate password fields nếu có nhập
     if (curPw || newPw || cnfPw) {
-      if (!curPw) { setSaveError("Vui lòng nhập mật khẩu hiện tại."); return; }
-      if (newPw.length < 8) { setSaveError("Mật khẩu mới phải có ít nhất 8 ký tự."); return; }
-      if (newPw !== cnfPw) { setSaveError("Mật khẩu xác nhận không khớp."); return; }
+      if (!curPw) { setSaveError(t("settings.profile.currentPasswordRequired")); return; }
+      if (newPw.length < 8) { setSaveError(t("settings.profile.passwordTooShort")); return; }
+      if (newPw !== cnfPw) { setSaveError(t("settings.profile.passwordMismatch")); return; }
     }
 
     const supabase = createSupabaseBrowser();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaveError("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."); return; }
+    if (!user) { setSaveError(t("settings.profile.sessionExpired")); return; }
 
     // Upload ảnh mới lên Supabase Storage (thực hiện trước, độc lập với profile update)
     if (avatarFileRef.current) {
@@ -255,7 +258,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
         .from("avatars")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (uploadError) {
-        setSaveError("Không thể tải ảnh lên. Vui lòng thử lại.");
+        setSaveError(t("settings.profile.avatarUploadError"));
         return;
       }
       const { data: { publicUrl } } = supabase.storage
@@ -275,7 +278,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
     const { error: profileError } = await supabase
       .from("user_profiles")
       .upsert({ id: user.id, full_name: name.trim() }, { onConflict: "id" });
-    if (profileError) { setSaveError("Không thể lưu thông tin. Vui lòng thử lại."); return; }
+    if (profileError) { setSaveError(t("settings.profile.saveError")); return; }
 
     // Đổi mật khẩu nếu có nhập
     if (newPw) {
@@ -297,7 +300,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
-        <SectionTitle>Ảnh đại diện</SectionTitle>
+        <SectionTitle>{t("settings.profile.avatar")}</SectionTitle>
         <input
           ref={fileInputRef}
           type="file"
@@ -333,7 +336,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
           </div>
           <div>
             <p style={{ fontSize: 14, fontWeight: 600, color: "var(--stg-text-body)", margin: "0 0 3px" }}>{initName}</p>
-            <p style={{ fontSize: 11.5, color: "var(--stg-text-dim)", margin: "0 0 10px" }}>JPG, PNG · Tối đa 2MB</p>
+            <p style={{ fontSize: 11.5, color: "var(--stg-text-dim)", margin: "0 0 10px" }}>{t("settings.profile.avatarHint")}</p>
             <button
               onClick={() => fileInputRef.current?.click()}
               style={{
@@ -341,7 +344,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
                 border: "1px solid var(--stg-btn-border)", background: "var(--stg-btn-bg)",
                 color: "var(--stg-text-label)", cursor: "pointer", fontFamily: "inherit",
               }}
-            >Chọn ảnh</button>
+            >{t("settings.profile.selectImage")}</button>
             {avatarError && (
               <p style={{ fontSize: 11, color: "#f87171", margin: "6px 0 0" }}>{avatarError}</p>
             )}
@@ -350,19 +353,19 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
       </Card>
 
       <Card>
-        <SectionTitle>Thông tin cơ bản</SectionTitle>
+        <SectionTitle>{t("settings.profile.basicInfo")}</SectionTitle>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <SettingInput label="Họ và tên" value={name} onChange={setName} placeholder="Nhập họ và tên" />
-          <SettingInput label="Email" value={email} disabled hint="Email không thể thay đổi — liên hệ admin nếu cần." />
+          <SettingInput label={t("settings.profile.displayName")} value={name} onChange={setName} placeholder={t("settings.profile.namePlaceholder")} />
+          <SettingInput label={t("settings.profile.email")} value={email} disabled hint={t("settings.profile.emailHint")} />
         </div>
       </Card>
 
       <Card>
-        <SectionTitle>Đổi mật khẩu</SectionTitle>
+        <SectionTitle>{t("settings.profile.changePassword")}</SectionTitle>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <SettingInput label="Mật khẩu hiện tại" type={showCur ? "text" : "password"} value={curPw} onChange={setCurPw} placeholder="••••••••" suffix={pwToggleBtn(showCur, setShowCur)} />
-          <SettingInput label="Mật khẩu mới" type={showNew ? "text" : "password"} value={newPw} onChange={setNewPw} placeholder="Tối thiểu 8 ký tự" suffix={pwToggleBtn(showNew, setShowNew)} />
-          <SettingInput label="Xác nhận mật khẩu mới" type={showCnf ? "text" : "password"} value={cnfPw} onChange={setCnfPw} placeholder="Nhập lại mật khẩu" suffix={pwToggleBtn(showCnf, setShowCnf)} />
+          <SettingInput label={t("settings.profile.currentPassword")} type={showCur ? "text" : "password"} value={curPw} onChange={setCurPw} placeholder="••••••••" suffix={pwToggleBtn(showCur, setShowCur)} />
+          <SettingInput label={t("settings.profile.newPassword")} type={showNew ? "text" : "password"} value={newPw} onChange={setNewPw} placeholder={t("settings.profile.newPasswordPlaceholder")} suffix={pwToggleBtn(showNew, setShowNew)} />
+          <SettingInput label={t("settings.profile.confirmPassword")} type={showCnf ? "text" : "password"} value={cnfPw} onChange={setCnfPw} placeholder={t("settings.profile.confirmPasswordPlaceholder")} suffix={pwToggleBtn(showCnf, setShowCnf)} />
         </div>
       </Card>
 
@@ -376,7 +379,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
 
 function AppearancePanel() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("dark");
-  const [lang, setLang] = useState<"vi" | "en">("vi");
+  const { lang, setLang, t: tr } = useTranslation();
   const [saved, setSaved] = useState(false);
 
   const applyTheme = (t: "light" | "dark" | "system") => {
@@ -396,9 +399,7 @@ function AppearancePanel() {
 
   useEffect(() => {
     const t = (localStorage.getItem("ats_theme") as "light" | "dark" | "system") || "dark";
-    const l = (localStorage.getItem("ats_lang") as "vi" | "en") || "vi";
     setTheme(t);
-    setLang(l);
     applyTheme(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -409,22 +410,21 @@ function AppearancePanel() {
 
   const handleSave = () => {
     localStorage.setItem("ats_theme", theme);
-    localStorage.setItem("ats_lang", lang);
     applyTheme(theme);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
 
   const themes = [
-    { id: "light" as const, label: "Sáng", icon: Sun, desc: "Giao diện màu sáng" },
-    { id: "dark" as const, label: "Tối", icon: Moon, desc: "Giao diện màu tối" },
-    { id: "system" as const, label: "Hệ thống", icon: Monitor, desc: "Theo thiết bị" },
+    { id: "light" as const, label: tr("settings.appearance.light"), icon: Sun, desc: tr("settings.appearance.lightDesc") },
+    { id: "dark" as const, label: tr("settings.appearance.dark"), icon: Moon, desc: tr("settings.appearance.darkDesc") },
+    { id: "system" as const, label: tr("settings.appearance.system"), icon: Monitor, desc: tr("settings.appearance.systemDesc") },
   ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
-        <SectionTitle>Chế độ hiển thị</SectionTitle>
+        <SectionTitle>{tr("settings.appearance.displayMode")}</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
           {themes.map(t => (
             <button key={t.id} onClick={() => handleThemeChange(t.id)} style={{
@@ -453,7 +453,7 @@ function AppearancePanel() {
       </Card>
 
       <Card>
-        <SectionTitle>Ngôn ngữ</SectionTitle>
+        <SectionTitle>{tr("settings.appearance.language")}</SectionTitle>
         <div style={{ display: "flex", gap: 10 }}>
           {[
             { id: "vi" as const, label: "Tiếng Việt", flag: "🇻🇳" },
@@ -511,6 +511,7 @@ async function unregisterPushSubscription(): Promise<string | null> {
 type NotifState = { emailApplicant: boolean; emailInterview: boolean; pushApplicant: boolean; pushInterview: boolean };
 
 function NotificationsPanel() {
+  const { t } = useTranslation();
   const [state, setState] = useState<NotifState>({
     emailApplicant: true, emailInterview: true,
     pushApplicant: false, pushInterview: true,
@@ -557,11 +558,11 @@ function NotificationsPanel() {
             });
             setPushError(null);
           } else {
-            setPushError("Trình duyệt chưa cấp quyền thông báo.");
+            setPushError(t("settings.notifications.pushPermissionDenied"));
             setState(p => ({ ...p, [key]: false }));
           }
         } catch {
-          setPushError("Không thể đăng ký push notification.");
+          setPushError(t("settings.notifications.pushSubscribeError"));
           setState(p => ({ ...p, [key]: false }));
         }
       } else {
@@ -599,29 +600,29 @@ function NotificationsPanel() {
   };
 
   if (loading) {
-    return <div style={{ color: "var(--stg-text-dim)", fontSize: 13 }}>Đang tải...</div>;
+    return <div style={{ color: "var(--stg-text-dim)", fontSize: 13 }}>{t("settings.notifications.loading")}</div>;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
-        <SectionTitle>Thông báo Email</SectionTitle>
-        <ToggleRow icon={User} label="Ứng viên mới" description="Nhận email khi có ứng viên mới nộp đơn" checked={state.emailApplicant} onChange={(v) => handleToggle("emailApplicant", v)} />
-        <ToggleRow icon={CalendarDays} label="Lịch phỏng vấn" description="Email xác nhận khi lịch phỏng vấn được tạo hoặc cập nhật" checked={state.emailInterview} onChange={(v) => handleToggle("emailInterview", v)} />
+        <SectionTitle>{t("settings.notifications.emailSection")}</SectionTitle>
+        <ToggleRow icon={User} label={t("settings.notifications.newApplicant")} description={t("settings.notifications.newApplicantEmailDesc")} checked={state.emailApplicant} onChange={(v) => handleToggle("emailApplicant", v)} />
+        <ToggleRow icon={CalendarDays} label={t("settings.notifications.interviewSchedule")} description={t("settings.notifications.interviewScheduleDesc")} checked={state.emailInterview} onChange={(v) => handleToggle("emailInterview", v)} />
       </Card>
 
       <Card>
-        <SectionTitle>Thông báo Trình duyệt (Push)</SectionTitle>
+        <SectionTitle>{t("settings.notifications.pushSection")}</SectionTitle>
         {!pushSupported && (
           <p style={{ fontSize: 12, color: "#f87171", margin: "0 0 12px" }}>
-            Trình duyệt chưa hỗ trợ push notification hoặc VAPID key chưa được cấu hình.
+            {t("settings.notifications.pushUnsupported")}
           </p>
         )}
         {pushError && (
           <p style={{ fontSize: 12, color: "#f87171", margin: "0 0 12px" }}>{pushError}</p>
         )}
-        <ToggleRow icon={Bell} label="Ứng viên mới" description="Thông báo tức thì khi có CV mới" checked={state.pushApplicant} onChange={(v) => pushSupported && handleToggle("pushApplicant", v)} />
-        <ToggleRow icon={Clock} label="Nhắc nhở phỏng vấn" description="Push notification 30 phút trước lịch phỏng vấn" checked={state.pushInterview} onChange={(v) => pushSupported && handleToggle("pushInterview", v)} />
+        <ToggleRow icon={Bell} label={t("settings.notifications.newApplicant")} description={t("settings.notifications.newApplicantPushDesc")} checked={state.pushApplicant} onChange={(v) => pushSupported && handleToggle("pushApplicant", v)} />
+        <ToggleRow icon={Clock} label={t("settings.notifications.interviewReminder")} description={t("settings.notifications.interviewReminderDesc")} checked={state.pushInterview} onChange={(v) => pushSupported && handleToggle("pushInterview", v)} />
       </Card>
 
       <SaveBar onSave={handleSave} saved={saved || saving} />
@@ -629,119 +630,6 @@ function NotificationsPanel() {
   );
 }
 
-
-function AIConfigPanel() {
-  const [thresh, setThresh] = useState({ strongHire: 8, hire: 6, maybe: 4 });
-  const [weights, setWeights] = useState({ jobFit: 50, potential: 30, cultureFit: 20 });
-  const [keywords, setKeywords] = useState(["React", "TypeScript", "Node.js", "Python", "AWS"]);
-  const [newKw, setNewKw] = useState("");
-  const [autoTag, setAutoTag] = useState(true);
-  const [github, setGithub] = useState(true);
-  const [saved, setSaved] = useState(false);
-
-  const addKw = () => {
-    const k = newKw.trim();
-    if (k && !keywords.includes(k)) { setKeywords(p => [...p, k]); setNewKw(""); }
-  };
-
-  const trackStyle = (val: number, max: number): React.CSSProperties => ({
-    width: "100%", appearance: "none", height: 4, borderRadius: 4, outline: "none", cursor: "pointer",
-    background: `linear-gradient(to right, #06b6d4 ${(val / max) * 100}%, rgba(255,255,255,0.1) ${(val / max) * 100}%)`,
-  });
-
-  const totalW = weights.jobFit + weights.potential + weights.cultureFit;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Card>
-        <SectionTitle>Ngưỡng quyết định (thang 10)</SectionTitle>
-        {([
-          { key: "strongHire" as const, label: "Strong Hire", color: "#4ade80" },
-          { key: "hire" as const, label: "Hire", color: "#22d3ee" },
-          { key: "maybe" as const, label: "Consider / Maybe", color: "#fbbf24" },
-        ]).map(({ key, label, color }) => (
-          <div key={key} style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "#cbd5e1" }}>{label}</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color }}>{thresh[key]}</span>
-            </div>
-            <input type="range" min={1} max={10} value={thresh[key]}
-              onChange={e => setThresh(p => ({ ...p, [key]: +e.target.value }))}
-              style={trackStyle(thresh[key], 10)} />
-          </div>
-        ))}
-      </Card>
-
-      <Card>
-        <SectionTitle>Trọng số chấm điểm (%)</SectionTitle>
-        {([
-          { key: "jobFit" as const, label: "Job Fit", desc: "Kỹ năng & kinh nghiệm" },
-          { key: "potential" as const, label: "Potential", desc: "Tiềm năng phát triển" },
-          { key: "cultureFit" as const, label: "Cultural Fit", desc: "Phù hợp văn hóa" },
-        ]).map(({ key, label, desc }) => (
-          <div key={key} style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
-              <div>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "#cbd5e1" }}>{label}</span>
-                <span style={{ fontSize: 11, color: "#475569", marginLeft: 8 }}>{desc}</span>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#22d3ee" }}>{weights[key]}%</span>
-            </div>
-            <input type="range" min={0} max={100} step={5} value={weights[key]}
-              onChange={e => setWeights(p => ({ ...p, [key]: +e.target.value }))}
-              style={trackStyle(weights[key], 100)} />
-          </div>
-        ))}
-        <p style={{ fontSize: 12, fontWeight: 600, color: totalW === 100 ? "#4ade80" : "#f87171", margin: "4px 0 0" }}>
-          Tổng: {totalW}% {totalW === 100 ? "✓" : `— còn thiếu ${100 - totalW}%`}
-        </p>
-      </Card>
-
-      <Card>
-        <SectionTitle>Tùy chọn AI</SectionTitle>
-        <ToggleRow icon={Brain} label="Tự động gắn nhãn quyết định" description="AI tự gắn nhãn Strong Hire / Hire / Reject theo ngưỡng điểm" checked={autoTag} onChange={setAutoTag} />
-        <ToggleRow icon={Link2} label="Phân tích GitHub Portfolio" description="Bổ sung bằng chứng kỹ năng từ profile GitHub của ứng viên" checked={github} onChange={setGithub} />
-      </Card>
-
-      <Card>
-        <SectionTitle>Từ khóa ưu tiên</SectionTitle>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
-          {keywords.map(kw => (
-            <span key={kw} style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "4px 10px", borderRadius: 20,
-              background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.2)",
-              fontSize: 12, color: "#67e8f9",
-            }}>
-              {kw}
-              <button onClick={() => setKeywords(p => p.filter(k => k !== kw))} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", color: "#475569" }}>
-                <X size={11} />
-              </button>
-            </span>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input value={newKw} onChange={e => setNewKw(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKw(); } }}
-            placeholder="Thêm từ khóa... (Enter để thêm)"
-            style={{
-              flex: 1, background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7,
-              padding: "8px 12px", fontSize: 13, color: "#e2e8f0",
-              outline: "none", fontFamily: "inherit",
-            }} />
-          <button onClick={addKw} style={{
-            padding: "8px 14px", borderRadius: 7, display: "flex", alignItems: "center", gap: 5,
-            border: "1px solid rgba(6,182,212,0.25)", background: "rgba(6,182,212,0.07)",
-            color: "#22d3ee", cursor: "pointer", fontFamily: "inherit",
-          }}><Plus size={13} /></button>
-        </div>
-      </Card>
-
-      <SaveBar onSave={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }} saved={saved} />
-    </div>
-  );
-}
 
 const CALENDAR_LS_KEY = "ats_calendar_settings";
 
@@ -766,9 +654,10 @@ const CALENDAR_DEFAULTS: CalendarSettings = {
 };
 
 function CalendarPanel() {
+  const { t } = useTranslation();
   const DAYS = [
-    { id: 1, label: "T2" }, { id: 2, label: "T3" }, { id: 3, label: "T4" },
-    { id: 4, label: "T5" }, { id: 5, label: "T6" }, { id: 6, label: "T7" }, { id: 0, label: "CN" },
+    { id: 1, label: t("settings.calendar.dayMon") }, { id: 2, label: t("settings.calendar.dayTue") }, { id: 3, label: t("settings.calendar.dayWed") },
+    { id: 4, label: t("settings.calendar.dayThu") }, { id: 5, label: t("settings.calendar.dayFri") }, { id: 6, label: t("settings.calendar.daySat") }, { id: 0, label: t("settings.calendar.daySun") },
   ];
   const [workDays, setWorkDays] = useState(CALENDAR_DEFAULTS.workDays);
   const [wStart, setWStart] = useState(CALENDAR_DEFAULTS.wStart);
@@ -808,7 +697,7 @@ function CalendarPanel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
-        <SectionTitle>Ngày làm việc</SectionTitle>
+        <SectionTitle>{t("settings.calendar.workDays")}</SectionTitle>
         <div style={{ display: "flex", gap: 7 }}>
           {DAYS.map(d => {
             const on = workDays.includes(d.id);
@@ -827,24 +716,24 @@ function CalendarPanel() {
       </Card>
 
       <Card>
-        <SectionTitle>Giờ làm việc</SectionTitle>
+        <SectionTitle>{t("settings.calendar.workHours")}</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <SettingInput label="Bắt đầu" type="time" value={wStart} onChange={setWStart} />
-          <SettingInput label="Kết thúc" type="time" value={wEnd} onChange={setWEnd} />
+          <SettingInput label={t("settings.calendar.start")} type="time" value={wStart} onChange={setWStart} />
+          <SettingInput label={t("settings.calendar.end")} type="time" value={wEnd} onChange={setWEnd} />
         </div>
         <div style={{ height: 1, background: "var(--stg-divider)", margin: "16px 0" }} />
-        <SectionTitle>Giờ nghỉ trưa</SectionTitle>
+        <SectionTitle>{t("settings.calendar.lunchBreak")}</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <SettingInput label="Bắt đầu" type="time" value={lStart} onChange={setLStart} />
-          <SettingInput label="Kết thúc" type="time" value={lEnd} onChange={setLEnd} />
+          <SettingInput label={t("settings.calendar.start")} type="time" value={lStart} onChange={setLStart} />
+          <SettingInput label={t("settings.calendar.end")} type="time" value={lEnd} onChange={setLEnd} />
         </div>
       </Card>
 
       <Card>
-        <SectionTitle>Cấu hình đặt lịch</SectionTitle>
+        <SectionTitle>{t("settings.calendar.schedulingConfig")}</SectionTitle>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Múi giờ</label>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>{t("settings.calendar.timezone")}</label>
             <select className="stg-select" value={tz} onChange={e => setTz(e.target.value)} style={{
               width: "100%", padding: "9px 12px",
               background: "var(--stg-input-bg)", border: "1px solid var(--stg-input-border)",
@@ -858,8 +747,8 @@ function CalendarPanel() {
           </div>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Buffer giữa các slot</label>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#22d3ee" }}>{buffer} phút</span>
+              <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{t("settings.calendar.bufferBetweenSlots")}</label>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#22d3ee" }}>{buffer} {t("settings.calendar.minutesUnit")}</span>
             </div>
             <input type="range" min={0} max={30} step={5} value={buffer}
               onChange={e => setBuffer(+e.target.value)}
@@ -868,8 +757,8 @@ function CalendarPanel() {
                 background: `linear-gradient(to right, #06b6d4 ${(buffer / 30) * 100}%, rgba(255,255,255,0.1) ${(buffer / 30) * 100}%)`,
               }} />
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: "var(--stg-text-dim)" }}>0p</span>
-              <span style={{ fontSize: 10, color: "var(--stg-text-dim)" }}>30p</span>
+              <span style={{ fontSize: 10, color: "var(--stg-text-dim)" }}>0{t("settings.calendar.minutesShort")}</span>
+              <span style={{ fontSize: 10, color: "var(--stg-text-dim)" }}>30{t("settings.calendar.minutesShort")}</span>
             </div>
           </div>
         </div>
@@ -927,10 +816,11 @@ Trân trọng,
 };
 
 function EmailTemplatesPanel() {
+  const { t } = useTranslation();
   const TMPL_TABS = [
-    { id: "interview", label: "Mời phỏng vấn", icon: CalendarDays },
-    { id: "rejection", label: "Từ chối", icon: X },
-    { id: "approval", label: "Phê duyệt nội bộ", icon: Check },
+    { id: "interview", label: t("settings.emailTemplates.tabInterview"), icon: CalendarDays },
+    { id: "rejection", label: t("settings.emailTemplates.tabRejection"), icon: X },
+    { id: "approval", label: t("settings.emailTemplates.tabApproval"), icon: Check },
   ];
 
   const [active, setActive] = useState("interview");
@@ -985,12 +875,12 @@ function EmailTemplatesPanel() {
       <Card>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <SettingInput
-            label="Tiêu đề email"
+            label={t("settings.emailTemplates.emailSubject")}
             value={templates[active].subject}
             onChange={v => setTemplates(p => ({ ...p, [active]: { ...p[active], subject: v } }))}
           />
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Nội dung email</label>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>{t("settings.emailTemplates.emailBody")}</label>
             <textarea
               ref={taRef}
               value={templates[active].body}
@@ -1013,7 +903,7 @@ function EmailTemplatesPanel() {
       </Card>
 
       <Card>
-        <SectionTitle>Biến — click để chèn vào nội dung</SectionTitle>
+        <SectionTitle>{t("settings.emailTemplates.variablesHint")}</SectionTitle>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
           {VARS.map(v => (
             <button key={v} onClick={() => insertVar(v)} style={{
@@ -1044,31 +934,30 @@ type TabDef = {
   adminOnly?: boolean;
 };
 
-const PERSONAL_TABS: TabDef[] = [
-  { id: "profile",       label: "Hồ sơ tài khoản",    icon: User },
-  { id: "appearance",    label: "Giao diện & Hiển thị", icon: Palette },
-  { id: "notifications", label: "Thông báo",            icon: Bell },
-];
-
-const ADMIN_TABS: TabDef[] = [
-  { id: "ai-config",        label: "Cấu hình AI",          icon: Brain,       adminOnly: true },
-  { id: "calendar",         label: "Lịch & Giờ làm việc", icon: CalendarDays, adminOnly: true },
-  { id: "email-templates",  label: "Mẫu Email",            icon: Mail,        adminOnly: true },
-];
-
-const TITLES: Record<string, { title: string; desc: string }> = {
-  "profile":          { title: "Hồ sơ tài khoản",     desc: "Quản lý thông tin cá nhân và bảo mật tài khoản" },
-  "appearance":       { title: "Giao diện & Hiển thị", desc: "Tùy chỉnh chế độ sáng/tối và ngôn ngữ hiển thị" },
-  "notifications":    { title: "Thông báo",            desc: "Cài đặt kênh và loại thông báo muốn nhận" },
-"ai-config":        { title: "Cấu hình AI",          desc: "Điều chỉnh ngưỡng điểm và trọng số chấm điểm AI" },
-  "calendar":         { title: "Lịch & Giờ làm việc",  desc: "Cấu hình giờ làm việc và quy tắc đặt lịch phỏng vấn" },
-  "email-templates":  { title: "Mẫu Email",            desc: "Chỉnh sửa nội dung email tự động của hệ thống" },
-};
-
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState({ name: "...", email: "...", initials: "··" });
+  const { t } = useTranslation();
+
+  const PERSONAL_TABS: TabDef[] = [
+    { id: "profile",       label: t("settings.nav.profile"),       icon: User },
+    { id: "appearance",    label: t("settings.nav.appearance"),     icon: Palette },
+    { id: "notifications", label: t("settings.nav.notifications"),  icon: Bell },
+  ];
+
+  const ADMIN_TABS: TabDef[] = [
+    { id: "calendar",        label: t("settings.nav.calendar"),         icon: CalendarDays, adminOnly: true },
+    { id: "email-templates", label: t("settings.nav.emailTemplates"),   icon: Mail,        adminOnly: true },
+  ];
+
+  const TITLES: Record<string, { title: string; desc: string }> = {
+    "profile":         { title: t("settings.nav.profile"),       desc: t("settings.profile.subtitle") },
+    "appearance":      { title: t("settings.appearance.title"),   desc: t("settings.appearance.subtitle") },
+    "notifications":   { title: t("settings.nav.notifications"),  desc: t("settings.notifications.subtitle") },
+    "calendar":        { title: t("settings.nav.calendar"),       desc: t("settings.calendar.subtitle") },
+    "email-templates": { title: t("settings.nav.emailTemplates"), desc: t("settings.emailTemplates.subtitle") },
+  };
 
   useEffect(() => {
     const supabase = createSupabaseBrowser();
@@ -1106,8 +995,7 @@ export default function SettingsPage() {
       case "profile":          return <ProfilePanel initials={profile.initials} name={profile.name} email={profile.email} />;
       case "appearance":       return <AppearancePanel />;
       case "notifications":    return <NotificationsPanel />;
-case "ai-config":        return <AIConfigPanel />;
-      case "calendar":         return <CalendarPanel />;
+case "calendar":         return <CalendarPanel />;
       case "email-templates":  return <EmailTemplatesPanel />;
       default:                 return null;
     }
@@ -1129,13 +1017,13 @@ case "ai-config":        return <AIConfigPanel />;
           padding: "24px 0 16px",
         }}>
           <div style={{ padding: "0 16px 20px" }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--stg-text-h)", margin: "0 0 2px" }}>Cài đặt</h2>
-            <p style={{ fontSize: 11, color: "var(--stg-text-dim)", margin: 0 }}>Workspace & tài khoản</p>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--stg-text-h)", margin: "0 0 2px" }}>{t("settings.title")}</h2>
+            <p style={{ fontSize: 11, color: "var(--stg-text-dim)", margin: 0 }}>{t("settings.subtitle")}</p>
           </div>
 
           {/* Personal */}
           <p style={{ fontSize: 9.5, fontWeight: 700, color: "var(--stg-nav-section-label)", textTransform: "uppercase", letterSpacing: "0.1em", padding: "0 16px", marginBottom: 4 }}>
-            Cá nhân
+            {t("settings.personalSection")}
           </p>
           <div style={{ marginBottom: 20 }}>
             {PERSONAL_TABS.map(t => (
@@ -1149,7 +1037,7 @@ case "ai-config":        return <AIConfigPanel />;
           {/* Workspace/Admin */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 16px", marginBottom: 4 }}>
             <p style={{ fontSize: 9.5, fontWeight: 700, color: "var(--stg-nav-section-label)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
-              Workspace
+              {t("settings.workspaceSection")}
             </p>
             {isAdmin && (
               <span style={{
@@ -1176,7 +1064,7 @@ case "ai-config":        return <AIConfigPanel />;
             ))}
             {!isAdmin && (
               <p style={{ fontSize: 10.5, color: "var(--stg-text-dim)", padding: "8px 16px 0", lineHeight: 1.5 }}>
-                Chỉ Admin mới có thể truy cập mục Workspace.
+                {t("settings.workspaceAdminOnly")}
               </p>
             )}
           </div>
