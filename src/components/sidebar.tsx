@@ -116,6 +116,17 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
+    const onProfileUpdated = (e: Event) => {
+      const name = (e as CustomEvent<{ name: string }>).detail?.name;
+      if (!name) return;
+      const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+      setProfile((p) => ({ ...p, name, initials }));
+    };
+    window.addEventListener("ats_profile_updated", onProfileUpdated);
+    return () => window.removeEventListener("ats_profile_updated", onProfileUpdated);
+  }, []);
+
+  useEffect(() => {
     const supabase = createSupabaseBrowser();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;

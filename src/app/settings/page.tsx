@@ -279,6 +279,7 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
       .from("user_profiles")
       .upsert({ id: user.id, full_name: name.trim() }, { onConflict: "id" });
     if (profileError) { setSaveError(t("settings.profile.saveError")); return; }
+    window.dispatchEvent(new CustomEvent("ats_profile_updated", { detail: { name: name.trim() } }));
 
     // Đổi mật khẩu nếu có nhập
     if (newPw) {

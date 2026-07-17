@@ -112,18 +112,18 @@
   --ats-score-low: #DC2626;
 
   /* Pipeline stage cards – light */
-  --pipe-recv-bg: #EFF6FF;
+  --pipe-recv-bg: #DBEAFE;
   --pipe-recv-text: #1D4ED8;
-  --pipe-recv-border: #DBEAFE;
-  --pipe-ai-bg: #F5F3FF;
+  --pipe-recv-border: #BFDBFE;
+  --pipe-ai-bg: #EDE9FE;
   --pipe-ai-text: #6D28D9;
-  --pipe-ai-border: #EDE9FE;
-  --pipe-iv-bg: #FFF7ED;
+  --pipe-ai-border: #DDD6FE;
+  --pipe-iv-bg: #FFEDD5;
   --pipe-iv-text: #C2410C;
-  --pipe-iv-border: #FFEDD5;
-  --pipe-res-bg: #ECFDF5;
+  --pipe-iv-border: #FED7AA;
+  --pipe-res-bg: #D1FAE5;
   --pipe-res-text: #047857;
-  --pipe-res-border: #D1FAE5;
+  --pipe-res-border: #A7F3D0;
   --pipe-bar-track: rgba(0,0,0,0.07);
 
   /* Gmail integration bar – light */
@@ -235,18 +235,18 @@
   --ats-score-low: #F87171;
 
   /* Pipeline stage cards – dark */
-  --pipe-recv-bg: rgba(29,78,216,0.15);
-  --pipe-recv-text: #60A5FA;
-  --pipe-recv-border: rgba(29,78,216,0.3);
-  --pipe-ai-bg: rgba(109,40,217,0.15);
-  --pipe-ai-text: #A78BFA;
-  --pipe-ai-border: rgba(109,40,217,0.3);
-  --pipe-iv-bg: rgba(194,65,12,0.15);
-  --pipe-iv-text: #FDBA74;
-  --pipe-iv-border: rgba(194,65,12,0.3);
-  --pipe-res-bg: rgba(4,120,87,0.15);
-  --pipe-res-text: #34D399;
-  --pipe-res-border: rgba(4,120,87,0.3);
+  --pipe-recv-bg: rgba(29,78,216,0.22);
+  --pipe-recv-text: #38BDF8;
+  --pipe-recv-border: rgba(56,189,248,0.4);
+  --pipe-ai-bg: rgba(109,40,217,0.22);
+  --pipe-ai-text: #C084FC;
+  --pipe-ai-border: rgba(192,132,252,0.4);
+  --pipe-iv-bg: rgba(194,65,12,0.22);
+  --pipe-iv-text: #FB923C;
+  --pipe-iv-border: rgba(251,146,60,0.4);
+  --pipe-res-bg: rgba(4,120,87,0.22);
+  --pipe-res-text: #4ADE80;
+  --pipe-res-border: rgba(74,222,128,0.4);
   --pipe-bar-track: rgba(255,255,255,0.06);
 
   /* Gmail integration bar – dark */
@@ -437,6 +437,20 @@ html:not(.dark) .text-zinc-700 { color: #64748b; }
 
 html:not(.dark) .bg-zinc-900,
 html:not(.dark) .bg-zinc-800 { background-color: var(--ats-surface); }
+
+/* Opacity-modifier variants (bg-zinc-900/40 etc.) aren't matched by the rules
+   above since Tailwind gives each opacity step its own class — without this,
+   they keep rendering as a muddy dark-on-light overlay in light mode. */
+html:not(.dark) .bg-zinc-900\/10,
+html:not(.dark) .bg-zinc-900\/20,
+html:not(.dark) .bg-zinc-900\/40,
+html:not(.dark) .bg-zinc-900\/50,
+html:not(.dark) .bg-zinc-900\/60,
+html:not(.dark) .bg-zinc-800\/10,
+html:not(.dark) .bg-zinc-800\/20,
+html:not(.dark) .bg-zinc-800\/40,
+html:not(.dark) .bg-zinc-800\/50,
+html:not(.dark) .bg-zinc-800\/60 { background-color: var(--ats-surface-2); }
 
 html:not(.dark) .border-zinc-900,
 html:not(.dark) .border-zinc-800,

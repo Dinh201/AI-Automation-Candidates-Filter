@@ -396,7 +396,7 @@ export default function CandidatesPage() {
             <button
               onClick={handleScanGmail}
               disabled={scanning}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-500/20 disabled:opacity-50 text-white text-xs font-medium transition-colors whitespace-nowrap"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
               {scanning ? t("candidates.gmail.scanning") : t("candidates.gmail.scanNow")}
