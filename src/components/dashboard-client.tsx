@@ -60,14 +60,20 @@ function TrendChart({ days, todayLabel, otherDaysLabel, locale }: {
   const maxCount = Math.max(...days.map((d) => d.count), 1);
   return (
     <>
-      <div className="flex items-end gap-1.5 h-20 mt-2">
+      <div className="flex items-end gap-1.5 h-24 mt-2">
         {days.map((d, i) => {
           const pct = Math.max((d.count / maxCount) * 100, d.count > 0 ? 8 : 3);
           const barMaxPx = 56;
           const isLast = i === days.length - 1;
           const label = new Date(d.dateIso).toLocaleDateString(locale, { weekday: "narrow" });
           return (
-            <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1.5 group">
+            <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 group">
+              <span
+                className="text-[10px] font-semibold tabular-nums"
+                style={{ color: isLast ? "#2563eb" : "var(--ats-text-muted)" }}
+              >
+                {d.count}
+              </span>
               <div
                 className="w-full rounded-t-md transition-all duration-300 relative overflow-hidden"
                 style={{
@@ -80,7 +86,7 @@ function TrendChart({ days, todayLabel, otherDaysLabel, locale }: {
               >
                 {d.count > 0 && isLast && <div className="absolute inset-0 bg-white/5" />}
               </div>
-              <span className={`text-[9px] ${isLast ? "text-blue-400" : "ats-text-muted"}`}>
+              <span className={`text-[9px] mt-0.5 ${isLast ? "text-blue-400" : "ats-text-muted"}`}>
                 {label}
               </span>
             </div>

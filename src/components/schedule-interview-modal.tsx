@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   Clock,
-  User,
-  Mail,
   Loader2,
   CheckCircle2,
   ExternalLink,
@@ -13,6 +11,7 @@ import {
   X,
   ChevronLeft,
 } from "lucide-react";
+import { createSupabaseBrowser } from "@/lib/supabase-browser";
 
 interface Props {
   candidateId: string;
@@ -65,6 +64,20 @@ export function ScheduleInterviewModal({
   function onChange(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowser();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      const name = data?.full_name || user.email?.split("@")[0] || "HR";
+      setForm((f) => ({ ...f, interviewer_name: name, interviewer_email: user.email ?? "" }));
+    });
+  }, []);
 
   async function handleFindSlots(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -194,7 +207,12 @@ export function ScheduleInterviewModal({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
+        className="px-4 py-2 rounded-lg border text-sm font-semibold transition-colors hover:opacity-80"
+        style={{
+          background: "var(--pipe-ai-bg)",
+          borderColor: "var(--pipe-ai-border)",
+          color: "var(--pipe-ai-text)",
+        }}
       >
         Lên lịch phỏng vấn
       </button>
@@ -249,34 +267,6 @@ export function ScheduleInterviewModal({
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
-                      <User className="w-3 h-3" /> Tên interviewer *
-                    </label>
-                    <input
-                      required
-                      value={form.interviewer_name}
-                      onChange={(e) => onChange("interviewer_name", e.target.value)}
-                      placeholder="Nguyễn Văn A"
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
-                      <Mail className="w-3 h-3" /> Email interviewer *
-                    </label>
-                    <input
-                      required
-                      type="email"
-                      value={form.interviewer_email}
-                      onChange={(e) => onChange("interviewer_email", e.target.value)}
-                      placeholder="hr@company.com"
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
                     <Clock className="w-3 h-3" /> Thời lượng phỏng vấn
@@ -330,7 +320,12 @@ export function ScheduleInterviewModal({
                   <button
                     type="submit"
                     disabled={findingSlots}
-                    className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 rounded-lg border disabled:opacity-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 hover:opacity-80"
+                    style={{
+                      background: "var(--pipe-ai-bg)",
+                      borderColor: "var(--pipe-ai-border)",
+                      color: "var(--pipe-ai-text)",
+                    }}
                   >
                     {findingSlots ? (
                       <>
@@ -436,7 +431,12 @@ export function ScheduleInterviewModal({
                     type="button"
                     onClick={handleSchedule}
                     disabled={scheduling || !selectedSlot || slots.length === 0}
-                    className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 rounded-lg border disabled:opacity-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 hover:opacity-80"
+                    style={{
+                      background: "var(--pipe-ai-bg)",
+                      borderColor: "var(--pipe-ai-border)",
+                      color: "var(--pipe-ai-text)",
+                    }}
                   >
                     {scheduling ? (
                       <>

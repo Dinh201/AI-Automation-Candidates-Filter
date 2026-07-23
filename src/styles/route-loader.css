@@ -1,0 +1,60 @@
+.route-loadd {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #ebe8f6;
+}
+
+/* From Uiverse.io by KeylaSUE */
+.progress-loader {
+  top: 50%;
+  left: 50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.progress-loader {
+  width: 343px;
+  background: rgba(255, 255, 255, 0.2);
+  height: 5px;
+  border-radius: 7px;
+}
+
+.progress {
+  content: "";
+  width: 1px;
+  height: 5px;
+  border-radius: 7px;
+  background: rgb(215, 124, 255);
+  transition: 0.5s;
+  animation: loading1274 2s ease infinite;
+}
+
+@keyframes loading1274 {
+  0% {
+    width: 0%;
+  }
+
+  10% {
+    width: 10%;
+  }
+
+  50% {
+    width: 40%;
+  }
+
+  60% {
+    width: 60%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress {
+    animation: none !important;
+    width: 60%;
+  }
+}

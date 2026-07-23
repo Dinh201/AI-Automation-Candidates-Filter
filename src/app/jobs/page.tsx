@@ -341,9 +341,10 @@ export default function JobsPage() {
           <button
             key={value}
             onClick={() => setActiveTab(value)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${activeTab === value ? "text-white" : "hover:text-slate-300"
-              }`}
-            style={{ color: activeTab === value ? "white" : "rgba(100,116,139,0.85)" }}
+            className="px-4 py-2.5 text-sm font-medium transition-colors relative"
+            style={{
+              color: activeTab === value ? "var(--ats-text-h)" : "var(--ats-text-muted)",
+            }}
           >
             {label}
             {tabCounts[value] !== undefined && (

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ConditionalSidebar } from "@/components/conditional-sidebar";
+import { RouteLoadingOverlay } from "@/components/route-loading-overlay";
 import { LanguageProvider } from "@/lib/i18n-context";
 
 const geistSans = Geist({
@@ -38,6 +39,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex" suppressHydrationWarning>
         <LanguageProvider>
+          <RouteLoadingOverlay />
           <ConditionalSidebar />
           <main className="flex-1 min-w-0 overflow-auto">{children}</main>
         </LanguageProvider>

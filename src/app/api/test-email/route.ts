@@ -1,16 +1,30 @@
 import { NextResponse } from "next/server";
-import { sendCandidateAppliedNotification, sendInterviewInvitation } from "@/services/email-service";
+import {
+  sendCandidateAppliedNotification,
+  sendInterviewInvitation,
+  sendHiredNotification,
+} from "@/services/email-service";
 
 export async function POST(request: Request) {
   try {
-    const { type } = await request.json().catch(() => ({ type: "notification" }));
+    const { type, to } = await request.json().catch(() => ({ type: "notification" }));
+    const recipient = to || process.env.GMAIL_USER!;
+
+    if (type === "offer") {
+      await sendHiredNotification({
+        candidateName: "Nguyễn Văn Test",
+        candidateEmail: recipient,
+        jobTitle: "Senior Frontend Developer",
+      });
+      return NextResponse.json({ ok: true, type: "offer" });
+    }
 
     if (type === "interview") {
       const result = await sendInterviewInvitation({
         candidateName: "Nguyễn Văn Test",
-        candidateEmail: process.env.GMAIL_USER!,
+        candidateEmail: recipient,
         interviewerName: "HR Manager",
-        interviewerEmail: process.env.GMAIL_USER!,
+        interviewerEmail: recipient,
         jobTitle: "Senior Frontend Developer",
         startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
         endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
