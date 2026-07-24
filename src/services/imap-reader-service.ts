@@ -2,7 +2,10 @@ import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 
 const PROCESSED_FOLDER = "AutoFilter-Processed";
-const MAX_MESSAGES_PER_SCAN = 10;
+// Giới hạn thấp để mỗi lần quét chạy nhanh, tránh timeout phía cron caller
+// (vd cron-job.org free plan giới hạn ~30s). Cron chạy mỗi vài giờ nên email
+// dư sẽ được xử lý ở lần quét kế tiếp, không mất dữ liệu.
+const MAX_MESSAGES_PER_SCAN = 5;
 
 export interface ImapAttachment {
   filename: string;
@@ -49,24 +52,31 @@ async function ensureProcessedFolder(client: ImapFlow): Promise<void> {
 }
 
 /**
- * Kết nối IMAP, tìm email trong INBOX khớp từ khóa tiêu đề, tải kèm PDF đính kèm
- * (nếu có), rồi đóng kết nối. Trả về danh sách email đã parse sẵn.
+ * Mở 1 kết nối IMAP duy nhất cho cả lần quét: tìm email khớp từ khóa tiêu đề,
+ * parse từng email rồi gọi `handler` để xử lý (tạo ứng viên, chấm điểm...).
+ * Sau khi `handler` xử lý xong (kể cả khi trả kết quả lỗi), email được chuyển
+ * sang folder AutoFilter-Processed trong CÙNG kết nối — không reconnect mỗi
+ * email, giúp cả lần quét chạy nhanh hơn nhiều so với trước.
+ *
+ * Nếu `handler` throw (lỗi không lường trước), email đó KHÔNG được đánh dấu
+ * đã xử lý để lần quét sau thử lại.
  */
-export async function listUnprocessedEmails(
-  subjectKeywords: string[]
-): Promise<ParsedImapEmail[]> {
+export async function scanImapInbox(
+  subjectKeywords: string[],
+  handler: (email: ParsedImapEmail) => Promise<void>
+): Promise<number> {
   const client = createClient();
   await client.connect();
 
   try {
     await ensureProcessedFolder(client);
     const lock = await client.getMailboxLock("INBOX");
-    const results: ParsedImapEmail[] = [];
+    let processedCount = 0;
 
     try {
       const orCriteria = subjectKeywords.map((keyword) => ({ header: { subject: keyword } }));
       const uids = await client.search({ or: orCriteria }, { uid: true });
-      if (!uids || uids.length === 0) return results;
+      if (!uids || uids.length === 0) return 0;
 
       const recentUids = uids.slice(-MAX_MESSAGES_PER_SCAN);
 
@@ -84,36 +94,27 @@ export async function listUnprocessedEmails(
           .map((a) => ({ filename: a.filename ?? "cv.pdf", content: a.content }));
 
         const fromAddr = parsed.from?.value?.[0];
-        results.push({
+        const email: ParsedImapEmail = {
           uid,
           senderName: fromAddr?.name?.trim() || fromAddr?.address?.split("@")[0] || "Unknown",
           senderEmail: fromAddr?.address ?? "",
           subject: parsed.subject ?? "",
           pdfAttachments,
-        });
+        };
+
+        try {
+          await handler(email);
+          await client.messageMove(uid, PROCESSED_FOLDER, { uid: true });
+          processedCount++;
+        } catch (err) {
+          console.error("[imap-scan] Lỗi xử lý email, bỏ qua đánh dấu đã xử lý:", uid, err);
+        }
       }
     } finally {
       lock.release();
     }
 
-    return results;
-  } finally {
-    await client.logout().catch(() => {});
-  }
-}
-
-/** Chuyển email sang folder AutoFilter-Processed để không quét lại lần sau. */
-export async function markEmailAsProcessed(uid: number): Promise<void> {
-  const client = createClient();
-  await client.connect();
-
-  try {
-    const lock = await client.getMailboxLock("INBOX");
-    try {
-      await client.messageMove(uid, PROCESSED_FOLDER, { uid: true });
-    } finally {
-      lock.release();
-    }
+    return processedCount;
   } finally {
     await client.logout().catch(() => {});
   }

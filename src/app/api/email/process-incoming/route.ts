@@ -11,11 +11,7 @@ import {
   downloadAttachment,
   markEmailAsProcessed as markGmailMessageAsProcessed,
 } from "@/services/gmail-reader-service";
-import {
-  isImapConfigured,
-  listUnprocessedEmails as listUnprocessedImapEmails,
-  markEmailAsProcessed as markImapMessageAsProcessed,
-} from "@/services/imap-reader-service";
+import { isImapConfigured, scanImapInbox } from "@/services/imap-reader-service";
 
 export const maxDuration = 120;
 
@@ -296,40 +292,32 @@ async function scanViaGmail(jobs: JobRef[], appUrl: string) {
 async function scanViaImap(jobs: JobRef[], appUrl: string) {
   const results: ScanResult[] = [];
 
-  let emails;
+  let scannedCount: number;
   try {
-    emails = await listUnprocessedImapEmails(SCAN_SUBJECT_KEYWORDS);
+    scannedCount = await scanImapInbox(SCAN_SUBJECT_KEYWORDS, async (email) => {
+      const pdfBuffer = email.pdfAttachments[0]?.content ?? null;
+      const result = await processCandidateEmail({
+        senderName: email.senderName,
+        senderEmail: email.senderEmail,
+        subject: email.subject,
+        pdfBuffer,
+        jobs,
+        appUrl,
+      });
+      results.push(result);
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[email-scan] Không khởi tạo được IMAP reader:", message);
     return NextResponse.json({ error: message, code: "IMAP_INIT_FAILED" }, { status: 500 });
   }
 
-  if (emails.length === 0) {
+  if (scannedCount === 0) {
     return NextResponse.json({ processed: 0, results: [] });
   }
 
-  for (const email of emails) {
-    const pdfBuffer = email.pdfAttachments[0]?.content ?? null;
-    const result = await processCandidateEmail({
-      senderName: email.senderName,
-      senderEmail: email.senderEmail,
-      subject: email.subject,
-      pdfBuffer,
-      jobs,
-      appUrl,
-    });
-    results.push(result);
-
-    try {
-      await markImapMessageAsProcessed(email.uid);
-    } catch (err) {
-      console.error("[email-scan] Không chuyển được email IMAP vào Processed:", email.uid, err);
-    }
-  }
-
   const okCount = results.filter((r) => r.status === "ok").length;
-  console.log(`[email-scan] Xử lý xong: ${okCount}/${emails.length} email (IMAP)`);
+  console.log(`[email-scan] Xử lý xong: ${okCount}/${scannedCount} email (IMAP)`);
   return NextResponse.json({ processed: results.length, created: okCount, results });
 }
 
