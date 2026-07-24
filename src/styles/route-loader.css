@@ -5,6 +5,19 @@
   background: #ebe8f6;
 }
 
+.dark .route-loadd {
+  background: #12181f;
+}
+
+.dark .progress-loader {
+  background: #1e293b;
+}
+
+.dark .progress {
+  background: linear-gradient(90deg, #00f2fe, #4facfe);
+  box-shadow: 0 0 10px 1px rgba(0, 242, 254, 0.55);
+}
+
 /* From Uiverse.io by KeylaSUE */
 .progress-loader {
   top: 50%;

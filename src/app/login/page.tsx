@@ -211,6 +211,23 @@ function LoginForm() {
     setConfirm("");
   }
 
+  /** Sau khi đăng nhập thành công: nếu tài khoản chưa kết nối Google Calendar,
+   *  tự chuyển sang màn hình cấp quyền Google luôn — không cần vào Settings bấm nút. */
+  async function goToAppOrConnectCalendar() {
+    try {
+      const res = await fetch("/api/calendar/status");
+      const { connected } = await res.json();
+      if (!connected) {
+        window.location.href = `/api/calendar/connect?return_to=${encodeURIComponent(redirect)}`;
+        return;
+      }
+    } catch {
+      // Không kiểm tra được trạng thái Calendar — vẫn cho vào app bình thường
+    }
+    router.replace(redirect);
+    router.refresh();
+  }
+
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -231,8 +248,7 @@ function LoginForm() {
       return;
     }
 
-    router.replace(redirect);
-    router.refresh();
+    await goToAppOrConnectCalendar();
   }
 
   async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
@@ -271,8 +287,7 @@ function LoginForm() {
 
     // Nếu có session ngay (email confirmation tắt) → vào thẳng app
     if (data.session) {
-      router.replace(redirect);
-      router.refresh();
+      await goToAppOrConnectCalendar();
       return;
     }
 
