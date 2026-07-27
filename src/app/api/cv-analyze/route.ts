@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { extractTextFromPDF } from "@/lib/pdf-parser";
 import { scoreCandidate } from "@/services/ai/scoring";
 import { logAudit } from "@/services/audit-service";
+import { MISSING_EMAIL_PLACEHOLDER, isValidEmailFormat } from "@/lib/candidate-email";
 
 export const maxDuration = 120;
 
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const jobId = formData.get("job_id") as string;
     const providedName = ((formData.get("name") as string) || "").trim();
-    const email = (formData.get("email") as string) || "unknown@quickscan.local";
+    const providedEmail = ((formData.get("email") as string) || "").trim();
+    const email = providedEmail || MISSING_EMAIL_PLACEHOLDER;
     const file = formData.get("cv") as File;
 
     if (!jobId || !file) {
@@ -118,7 +120,11 @@ export async function POST(request: Request) {
     const aiName = result.candidate_name?.trim() || "";
     const finalName = providedName || aiName || "Ứng viên không rõ tên";
 
-    // Lưu kết quả AI vào DB, cập nhật tên nếu AI trích xuất được
+    // Xác định email cuối cùng: ưu tiên user nhập > AI trích xuất (đúng định dạng) > placeholder
+    const aiEmail = result.candidate_email?.trim() || "";
+    const finalEmail = providedEmail || (isValidEmailFormat(aiEmail) ? aiEmail : "") || MISSING_EMAIL_PLACEHOLDER;
+
+    // Lưu kết quả AI vào DB, cập nhật tên/email nếu AI trích xuất được
     await supabaseAdmin
       .from("candidates")
       .update({
@@ -127,6 +133,7 @@ export async function POST(request: Request) {
         missing_information: result.missing_information.length > 0,
         status: "Scored",
         ...(finalName !== tempName ? { name: finalName } : {}),
+        ...(finalEmail !== email ? { email: finalEmail } : {}),
       })
       .eq("id", candidate.id);
 

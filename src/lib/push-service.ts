@@ -1,7 +1,9 @@
 import webpush from "web-push";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
+// Public key dùng chung với phía trình duyệt (đăng ký ở NEXT_PUBLIC_VAPID_PUBLIC_KEY
+// vì cần lộ ra client để gọi pushManager.subscribe) — không phải giá trị bí mật.
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@vacons.com.vn";
 

@@ -7,6 +7,10 @@ TRÍCH XUẤT TÊN ỨNG VIÊN:
 - Tên ứng viên thường xuất hiện ở đầu CV (phần tiêu đề, header, hoặc dòng đầu tiên).
 - Đặt tên đầy đủ vào field "candidate_name". Nếu không tìm thấy, để chuỗi rỗng "".
 
+TRÍCH XUẤT EMAIL ỨNG VIÊN:
+- Email thường nằm trong phần thông tin liên hệ (đầu CV, gần số điện thoại/địa chỉ).
+- Đặt vào field "candidate_email" đúng định dạng email tìm thấy trong text, KHÔNG được bịa email. Nếu không tìm thấy, để chuỗi rỗng "".
+
 QUY TẮC CHẤM ĐIỂM BẮT BUỘC (Scoring rules):
 1. Job Fit (Ưu tiên): Đánh giá dựa trên kỹ năng, công cụ, kinh nghiệm liên quan.
 2. Kỹ năng không liên quan: Nếu ứng viên liệt kê nhiều kỹ năng không khớp JD, Job Fit phải giảm mạnh.

@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { logAudit } from "@/services/audit-service";
 import { sendHiredNotification, sendRejectedNotification } from "@/services/email-service";
+import { isValidEmailFormat } from "@/lib/candidate-email";
 
 export async function GET(
   _request: Request,
@@ -30,7 +31,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  const allowed = ["status"];
+  const allowed = ["status", "email"];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
@@ -38,6 +39,10 @@ export async function PATCH(
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Không có trường hợp lệ để cập nhật", code: "VALIDATION_ERROR" }, { status: 400 });
+  }
+
+  if ("email" in updates && !isValidEmailFormat(updates.email as string)) {
+    return NextResponse.json({ error: "Email không hợp lệ", code: "VALIDATION_ERROR" }, { status: 400 });
   }
 
   const { data, error } = await supabaseAdmin

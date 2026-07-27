@@ -12,10 +12,12 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
+import { isMissingCandidateEmail, isValidEmailFormat } from "@/lib/candidate-email";
 
 interface Props {
   candidateId: string;
   candidateName: string;
+  candidateEmail: string;
   jobTitle: string | null;
   jobId: string | null;
   calendarConnected: boolean;
@@ -36,6 +38,7 @@ type Step = "form" | "slots" | "success";
 export function ScheduleInterviewModal({
   candidateId,
   candidateName,
+  candidateEmail,
   jobTitle,
   jobId,
   calendarConnected,
@@ -43,6 +46,9 @@ export function ScheduleInterviewModal({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("form");
+  const [emailInput, setEmailInput] = useState(candidateEmail);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const needsEmail = isMissingCandidateEmail(emailInput);
 
   const [form, setForm] = useState({
     interviewer_name: "",
@@ -81,8 +87,34 @@ export function ScheduleInterviewModal({
 
   async function handleFindSlots(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    setFindingSlots(true);
     setSlotsError("");
+
+    if (needsEmail) {
+      if (!isValidEmailFormat(emailInput)) {
+        setSlotsError("Vui lòng nhập email hợp lệ của ứng viên trước khi lên lịch.");
+        return;
+      }
+      setSavingEmail(true);
+      try {
+        const res = await fetch(`/api/candidates/${candidateId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: emailInput.trim() }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setSlotsError(data.error ?? "Không thể lưu email ứng viên. Vui lòng thử lại.");
+          return;
+        }
+      } catch (err) {
+        setSlotsError(err instanceof Error ? err.message : "Không thể lưu email ứng viên");
+        return;
+      } finally {
+        setSavingEmail(false);
+      }
+    }
+
+    setFindingSlots(true);
 
     try {
       const res = await fetch("/api/interviews/available-slots", {
@@ -171,6 +203,7 @@ export function ScheduleInterviewModal({
     setConflict("");
     setSlotsError("");
     setForm({ interviewer_name: "", interviewer_email: "", duration: "45", notes: "" });
+    setEmailInput(candidateEmail);
   }
 
   function formatSlot(slot: Slot) {
@@ -255,6 +288,22 @@ export function ScheduleInterviewModal({
             {/* ── Step 1: Form ── */}
             {step === "form" && (
               <form onSubmit={handleFindSlots} className="px-6 py-5 space-y-4">
+                {needsEmail && (
+                  <div className="space-y-1.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <label className="text-xs font-medium text-amber-300 flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" /> Ứng viên chưa có email — nhập trước khi lên lịch
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="email@ungvien.com"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                )}
+
                 {!calendarConnected && (
                   <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -319,7 +368,7 @@ export function ScheduleInterviewModal({
                   </button>
                   <button
                     type="submit"
-                    disabled={findingSlots}
+                    disabled={findingSlots || savingEmail}
                     className="flex-1 py-2.5 rounded-lg border disabled:opacity-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 hover:opacity-80"
                     style={{
                       background: "var(--pipe-ai-bg)",
@@ -327,7 +376,11 @@ export function ScheduleInterviewModal({
                       color: "var(--pipe-ai-text)",
                     }}
                   >
-                    {findingSlots ? (
+                    {savingEmail ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Đang lưu email...
+                      </>
+                    ) : findingSlots ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" /> Đang tìm lịch...
                       </>

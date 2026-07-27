@@ -337,6 +337,7 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
                 <ScheduleInterviewModal
                   candidateId={id}
                   candidateName={candidate.name}
+                  candidateEmail={candidate.email}
                   jobTitle={candidate.jobs?.title ?? null}
                   jobId={candidate.jobs?.id ?? null}
                   calendarConnected={calendarConnected}

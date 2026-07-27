@@ -31,6 +31,7 @@ export async function scoreCandidate(
   const schemaDescription = `Bắt buộc trả về JSON với cấu trúc chính xác như sau:
 {
   "candidate_name": string,
+  "candidate_email": string,
   "total_score": number,
   "cultural_fit_score": number,
   "job_fit_score": number,

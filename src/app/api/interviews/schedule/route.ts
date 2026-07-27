@@ -9,6 +9,7 @@ import {
 import { sendInterviewInvitation, sendInterviewHRNotification } from "@/services/email-service";
 import { sendPushToAll } from "@/lib/push-service";
 import { logAudit } from "@/services/audit-service";
+import { isMissingCandidateEmail } from "@/lib/candidate-email";
 
 async function getCalendarTokens(): Promise<GoogleTokens | null> {
   const { data } = await supabaseAdmin
@@ -112,6 +113,13 @@ export async function POST(request: Request) {
   if (candidateError || !candidate) {
     console.error("[schedule] Không tìm thấy ứng viên:", candidateError?.message);
     return NextResponse.json({ error: "Ứng viên không tồn tại", code: "NOT_FOUND" }, { status: 404 });
+  }
+
+  if (isMissingCandidateEmail(candidate.email)) {
+    return NextResponse.json(
+      { error: "Ứng viên chưa có email. Vui lòng bổ sung email trước khi lên lịch phỏng vấn.", code: "VALIDATION_ERROR" },
+      { status: 400 }
+    );
   }
 
   const jobTitle = (candidate.jobs as unknown as { title: string } | null)?.title ?? "Vị trí tuyển dụng";
