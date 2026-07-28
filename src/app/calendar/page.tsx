@@ -103,7 +103,7 @@ export default function CalendarPage() {
         </div>
         <Link
           href="/interviews"
-          className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-lg transition-colors"
+          className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 hover:border-indigo-400/60 hover:bg-indigo-500/10 px-3 py-1.5 rounded-lg transition-colors"
         >
           {t("calendar.viewList")}
         </Link>

@@ -10,6 +10,7 @@ import {
   Calendar,
   CalendarDays,
   ScanSearch,
+  Archive,
   Settings,
   ChevronRight,
   LogOut,
@@ -71,6 +72,7 @@ export function Sidebar() {
         { href: "/candidates",  label: t("sidebar.candidates"),    icon: Users,        exact: false },
         { href: "/jobs",        label: t("sidebar.jobPositions"),  icon: Briefcase,    exact: false },
         { href: "/cv-analyzer", label: t("sidebar.cvAnalysis"),    icon: ScanSearch,   exact: false },
+        { href: "/cv-library",  label: t("sidebar.cvLibrary"),     icon: Archive,      exact: false },
       ],
     },
     {

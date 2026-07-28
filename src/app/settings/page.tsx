@@ -249,6 +249,21 @@ function ProfilePanel({ initials, name: initName, email }: { initials: string; n
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveError(t("settings.profile.sessionExpired")); return; }
 
+    // Xác thực lại mật khẩu hiện tại trước khi cho đổi — updateUser() không tự
+    // kiểm tra việc này, chỉ cần phiên đăng nhập hợp lệ là đổi được, nên phải
+    // tự verify bằng signInWithPassword để tránh ai đó chiếm session rồi đổi
+    // mật khẩu người khác mà không cần biết mật khẩu cũ.
+    if (newPw && user.email) {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: curPw,
+      });
+      if (verifyError) {
+        setSaveError(t("settings.profile.currentPasswordIncorrect"));
+        return;
+      }
+    }
+
     // Upload ảnh mới lên Supabase Storage (thực hiện trước, độc lập với profile update)
     if (avatarFileRef.current) {
       const file = avatarFileRef.current;

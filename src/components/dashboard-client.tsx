@@ -80,8 +80,8 @@ function TrendChart({ days, todayLabel, otherDaysLabel, locale }: {
                   height: `${Math.round((pct / 100) * barMaxPx)}px`,
                   background: isLast
                     ? "linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)"
-                    : "rgba(37,99,235,0.35)",
-                  boxShadow: isLast ? "0 0 8px rgba(59,130,246,0.4)" : undefined,
+                    : "rgba(100,116,139,0.22)",
+                  boxShadow: isLast ? "0 0 10px rgba(59,130,246,0.5)" : undefined,
                 }}
               >
                 {d.count > 0 && isLast && <div className="absolute inset-0 bg-white/5" />}
@@ -99,7 +99,7 @@ function TrendChart({ days, todayLabel, otherDaysLabel, locale }: {
           {todayLabel}
         </div>
         <div className="flex items-center gap-1.5 text-xs ats-text-muted">
-          <div className="w-3 h-2 rounded-sm" style={{ background: "rgba(37,99,235,0.35)" }} />
+          <div className="w-3 h-2 rounded-sm" style={{ background: "rgba(100,116,139,0.22)" }} />
           {otherDaysLabel}
         </div>
       </div>
@@ -219,10 +219,6 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 border border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400 animate-pulse" />
-            Live
-          </div>
           <Link
             href="/cv-analyzer"
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ats-btn-primary"
@@ -258,7 +254,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <BarChart2 className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-              <h2 className="text-sm font-semibold ats-text-h">{t("dashboard.candidateTrend")}</h2>
+              <h2 className="text-base font-bold tracking-tight ats-accent-text">{t("dashboard.candidateTrend")}</h2>
             </div>
             <span className="text-xs ats-text-muted">{t("dashboard.last7Days")}</span>
           </div>
@@ -271,7 +267,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/[0.05]">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-              <h2 className="text-sm font-semibold ats-text-h">{t("dashboard.todayInterviews")}</h2>
+              <h2 className="text-sm font-bold ats-accent-text">{t("dashboard.todayInterviews")}</h2>
             </div>
             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/12 dark:text-blue-300 dark:border-blue-500/22">
               {todayInterviews.length}
@@ -326,7 +322,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/[0.05]">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-            <h2 className="text-sm font-semibold ats-text-h">{t("dashboard.recentCandidates")}</h2>
+            <h2 className="text-sm font-bold ats-accent-text">{t("dashboard.recentCandidates")}</h2>
           </div>
           <Link href="/candidates" className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 transition-colors">
             {t("common.viewAll")} <ArrowRight className="w-3 h-3" />
@@ -405,7 +401,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/[0.05]">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-            <h2 className="text-sm font-semibold ats-text-h">{t("dashboard.recentActivity")}</h2>
+            <h2 className="text-sm font-bold ats-accent-text">{t("dashboard.recentActivity")}</h2>
           </div>
           <div className="flex items-center gap-1.5 text-xs ats-text-muted">
             <Target className="w-3 h-3" />

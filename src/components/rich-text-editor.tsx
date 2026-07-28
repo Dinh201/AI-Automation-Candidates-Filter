@@ -74,8 +74,8 @@ function TBtn({
       title={title}
       className={`p-1.5 rounded transition-colors ${
         active
-          ? "bg-indigo-600/25 text-indigo-300"
-          : "text-zinc-500 hover:bg-zinc-700 hover:text-zinc-200"
+          ? "bg-indigo-600/25 text-indigo-400"
+          : "text-[var(--ats-text-muted)] hover:bg-[var(--ats-surface)] hover:text-[var(--ats-text-h)]"
       }`}
     >
       {children}
@@ -84,13 +84,13 @@ function TBtn({
 }
 
 function Sep() {
-  return <span className="w-px h-3.5 bg-zinc-700 mx-0.5 self-center shrink-0" />;
+  return <span className="w-px h-3.5 bg-[var(--ats-border)] mx-0.5 self-center shrink-0" />;
 }
 
 function Toolbar({ editor }: { editor: Editor | null }) {
   if (!editor) return null;
   return (
-    <div className="flex items-center flex-wrap gap-0.5 px-2 py-1.5 border-b border-zinc-700/80 bg-zinc-950/50">
+    <div className="flex items-center flex-wrap gap-0.5 px-2 py-1.5 border-b border-[var(--ats-border)] bg-[var(--ats-surface-2)]">
       <TBtn
         onClick={() => editor.chain().focus().toggleBold().run()}
         active={editor.isActive("bold")}
@@ -173,7 +173,7 @@ function Toolbar({ editor }: { editor: Editor | null }) {
             e.target.value = "";
           }
         }}
-        className="text-[11px] bg-zinc-800 border border-zinc-700 text-zinc-400 rounded px-1.5 py-0.5 focus:outline-none focus:border-indigo-500/50 cursor-pointer hover:text-zinc-200 transition-colors"
+        className="text-[11px] bg-[var(--ats-surface)] border border-[var(--ats-border)] text-[var(--ats-text-muted)] rounded px-1.5 py-0.5 focus:outline-none focus:border-indigo-500/50 cursor-pointer hover:text-[var(--ats-text-h)] transition-colors"
       >
         <option value="" disabled>
           Giãn dòng
@@ -219,7 +219,7 @@ export function RichTextEditor({ value, onChange, placeholder, minHeight = "100p
   });
 
   return (
-    <div className="border border-zinc-700 rounded-xl overflow-hidden bg-zinc-900/40 transition-colors focus-within:border-indigo-500/60">
+    <div className="border border-[var(--ats-border)] rounded-xl overflow-hidden bg-[var(--ats-surface)] transition-colors focus-within:border-indigo-500/60">
       <Toolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>

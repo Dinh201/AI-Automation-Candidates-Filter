@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  FileText,
   Brain,
   AlertTriangle,
   CheckCircle,
@@ -19,6 +18,7 @@ import { CandidateScoringResult } from "@/services/ai/schema";
 import { ScheduleInterviewModal } from "@/components/schedule-interview-modal";
 import { AskAIPanel } from "@/components/ask-ai-panel";
 import { CandidateActionButtons } from "@/components/candidate-action-buttons";
+import { ViewCvLink } from "@/components/view-cv-link";
 
 type Job = {
   id: string;
@@ -184,14 +184,10 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
             <span className={`px-3 py-1 rounded-lg text-xs font-medium ${statusCfg.className}`}>
               {statusCfg.label}
             </span>
-            <a
-              href={candidate.cv_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <ViewCvLink
+              candidateId={id}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-600/15 border border-indigo-600/20 text-indigo-400 text-xs font-medium hover:bg-indigo-600/25 transition-colors"
-            >
-              <FileText className="w-3.5 h-3.5" /> Xem CV
-            </a>
+            />
             {ai && (
               <CandidateActionButtons
                 candidateId={id}

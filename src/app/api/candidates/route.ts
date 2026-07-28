@@ -6,7 +6,7 @@ import { logAudit } from "@/services/audit-service";
 export async function GET() {
   const { data, error } = await supabase
     .from("candidates")
-    .select("id, name, email, status, total_score, ai_score_result, created_at, jobs(title)")
+    .select("id, name, email, status, total_score, ai_score_result, cv_url, created_at, jobs(title)")
     .order("created_at", { ascending: false });
 
   if (error) {
