@@ -1,14 +1,27 @@
 import webpush from "web-push";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+// Bỏ BOM (﻿) và khoảng trắng thừa — biến môi trường copy-paste từ nơi khác
+// (vd Notepad lưu UTF-8 with BOM) thường dính ký tự ẩn này ở đầu giá trị, khiến
+// web-push từ chối coi đây là URL hợp lệ.
+function cleanEnv(value: string | undefined): string {
+  return (value ?? "").replace(/^﻿/, "").trim();
+}
+
 // Public key dùng chung với phía trình duyệt (đăng ký ở NEXT_PUBLIC_VAPID_PUBLIC_KEY
 // vì cần lộ ra client để gọi pushManager.subscribe) — không phải giá trị bí mật.
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || "";
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@vacons.com.vn";
+const VAPID_PUBLIC_KEY = cleanEnv(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) || cleanEnv(process.env.VAPID_PUBLIC_KEY);
+const VAPID_PRIVATE_KEY = cleanEnv(process.env.VAPID_PRIVATE_KEY);
+const VAPID_SUBJECT = cleanEnv(process.env.VAPID_SUBJECT) || "mailto:admin@vacons.com.vn";
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  // Cấu hình env var có thể sai định dạng (vd subject không phải URL hợp lệ) —
+  // không được để lỗi này làm sập cả build/server, chỉ vô hiệu hoá push.
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  } catch (err) {
+    console.error("[push] Cấu hình VAPID không hợp lệ — push notification sẽ không hoạt động:", err);
+  }
 }
 
 export interface PushPayload {
