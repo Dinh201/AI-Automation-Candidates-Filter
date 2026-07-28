@@ -3,6 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { CandidateScoringResult } from "@/services/ai/schema";
 import { DashboardClient } from "@/components/dashboard-client";
 
+// Dashboard đọc dữ liệu ứng viên/phỏng vấn thay đổi liên tục (quét mail, ứng
+// viên nộp CV...) — không được cache tĩnh, mỗi lần vào phải render lại mới.
+export const dynamic = "force-dynamic";
+
 type AuditLog = {
   id: string;
   entity_type: string;
