@@ -67,7 +67,7 @@ function ScoreCell({ score }: { score: number | null }) {
   );
 }
 
-type GmailStatus = "connected_oauth" | "connected_env" | "disconnected" | "unknown";
+type GmailStatus = "connected_oauth" | "connected_env" | "connected_imap" | "disconnected" | "unknown";
 type ScanResult = { processed: number; created: number } | null;
 
 export default function CandidatesPage() {
@@ -116,6 +116,7 @@ export default function CandidatesPage() {
       .then((r) => r.json())
       .then(({ connected, source }) => {
         if (!connected) setGmailStatus("disconnected");
+        else if (source === "imap") setGmailStatus("connected_imap");
         else setGmailStatus(source === "oauth" ? "connected_oauth" : "connected_env");
       })
       .catch(() => setGmailStatus("disconnected"));
@@ -365,14 +366,15 @@ export default function CandidatesPage() {
         </div>
       )}
 
-      {(gmailStatus === "connected_oauth" || gmailStatus === "connected_env") && (
+      {(gmailStatus === "connected_oauth" || gmailStatus === "connected_env" || gmailStatus === "connected_imap") && (
         <div className="gmail-bar flex items-center justify-between gap-4 p-3.5 rounded-xl">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 shrink-0" />
-              <span className="text-sm ats-text-h font-medium">{t("candidates.gmail.connected")}</span>
+              <span className="text-sm ats-text-h font-medium">
+                {gmailStatus === "connected_imap" ? t("candidates.gmail.connectedImap") : t("candidates.gmail.connected")}
+              </span>
             </div>
-            {gmailStatus === "connected_env"}
             {scanResult && (
               <span className="text-xs ats-text-muted">
                 {t("candidates.gmail.scanResultPrefix")} {scanResult.processed} {t("candidates.gmail.emailsCount")} {scanResult.created} {t("candidates.gmail.candidatesCount")}
@@ -399,7 +401,11 @@ export default function CandidatesPage() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-500/20 disabled:opacity-50 text-white text-xs font-medium transition-colors whitespace-nowrap"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
-              {scanning ? t("candidates.gmail.scanning") : t("candidates.gmail.scanNow")}
+              {scanning
+                ? t("candidates.gmail.scanning")
+                : gmailStatus === "connected_imap"
+                  ? t("candidates.gmail.scanNowImap")
+                  : t("candidates.gmail.scanNow")}
             </button>
           </div>
         </div>

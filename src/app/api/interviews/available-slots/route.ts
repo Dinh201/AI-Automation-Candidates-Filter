@@ -6,19 +6,21 @@ import {
   GoogleTokens,
   BusyPeriod,
 } from "@/services/google-calendar-service";
+import { calendarSettingsFromRow, tzOffset } from "@/lib/calendar-settings";
 
-const TZ = "Asia/Ho_Chi_Minh";
-const MORNING_START_MIN = 10 * 60 + 30; // 10:30
-const MORNING_END_MIN   = 11 * 60 + 30; // 11:30
-const AFTERNOON_START_MIN = 14 * 60;    // 14:00
-const AFTERNOON_END_MIN   = 17 * 60;    // 17:00
-const TIME_WINDOWS = [
-  { start: MORNING_START_MIN, end: MORNING_END_MIN },
-  { start: AFTERNOON_START_MIN, end: AFTERNOON_END_MIN },
-];
 const SLOT_STEP_MIN = 30;
 const SCAN_DAYS = 14;
 const MAX_SLOTS = 3;
+
+async function getCalendarSettings() {
+  const { data } = await supabaseAdmin
+    .from("calendar_settings")
+    .select("*")
+    .eq("id", "default")
+    .single();
+
+  return calendarSettingsFromRow(data);
+}
 
 async function getValidTokens(): Promise<GoogleTokens | null> {
   const { data } = await supabaseAdmin
@@ -56,40 +58,46 @@ async function getValidTokens(): Promise<GoogleTokens | null> {
   return tokens;
 }
 
-// Returns "YYYY-MM-DD" in VN timezone
-function vnDateStr(date: Date): string {
-  return date.toLocaleDateString("en-CA", { timeZone: TZ });
+// Returns "YYYY-MM-DD" in the configured timezone
+function dateStrInTz(date: Date, timezone: string): string {
+  return date.toLocaleDateString("en-CA", { timeZone: timezone });
 }
 
 // Add N calendar days to a "YYYY-MM-DD" string
-function addDays(dateStr: string, n: number): string {
-  const d = new Date(`${dateStr}T12:00:00+07:00`);
+function addDays(dateStr: string, n: number, timezone: string, offset: string): string {
+  const d = new Date(`${dateStr}T12:00:00${offset}`);
   d.setDate(d.getDate() + n);
-  return vnDateStr(d);
+  return dateStrInTz(d, timezone);
 }
 
-// Get day-of-week (0=Sun, 6=Sat) for a "YYYY-MM-DD" string in VN timezone
-function weekday(dateStr: string): number {
-  return new Date(`${dateStr}T12:00:00+07:00`).getDay();
+// Get day-of-week (0=Sun, 6=Sat) for a "YYYY-MM-DD" string in the configured timezone
+function weekday(dateStr: string, offset: string): number {
+  return new Date(`${dateStr}T12:00:00${offset}`).getDay();
 }
 
-// Build a UTC Date from a VN local date + minutes-since-midnight
-function makeSlot(dateStr: string, totalMinutes: number): Date {
+// Build a Date from a local date + minutes-since-midnight, in the configured timezone
+function makeSlot(dateStr: string, totalMinutes: number, offset: string): Date {
   const h = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
   const m = String(totalMinutes % 60).padStart(2, "0");
-  return new Date(`${dateStr}T${h}:${m}:00+07:00`);
+  return new Date(`${dateStr}T${h}:${m}:00${offset}`);
+}
+
+function timeToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
 }
 
 function overlapsAny(
   slotStart: Date,
   slotEnd: Date,
-  busy: { start: string; end: string }[]
+  busy: { start: string; end: string }[],
+  bufferMs: number
 ): boolean {
   const s = slotStart.getTime();
   const e = slotEnd.getTime();
   return busy.some((p) => {
-    const ps = new Date(p.start).getTime();
-    const pe = new Date(p.end).getTime();
+    const ps = new Date(p.start).getTime() - bufferMs;
+    const pe = new Date(p.end).getTime() + bufferMs;
     return s < pe && e > ps;
   });
 }
@@ -113,11 +121,30 @@ export async function POST(request: Request) {
     );
   }
 
+  // Cấu hình "Lịch làm việc" từ Cài đặt → Workspace (ngày/giờ làm việc, nghỉ
+  // trưa, múi giờ, buffer) — điều khiển trực tiếp việc gợi ý slot bên dưới.
+  const settings = await getCalendarSettings();
+  const offset = tzOffset(settings.timezone);
+  const workDaySet = new Set(settings.workDays);
+  const bufferMs = settings.bufferMinutes * 60_000;
+
+  const workStartMin = timeToMinutes(settings.workStart);
+  const workEndMin = timeToMinutes(settings.workEnd);
+  const lunchStartMin = timeToMinutes(settings.lunchStart);
+  const lunchEndMin = timeToMinutes(settings.lunchEnd);
+  const hasLunchGap = lunchStartMin > workStartMin && lunchEndMin < workEndMin;
+  const dayWindows = hasLunchGap
+    ? [
+        { start: workStartMin, end: lunchStartMin },
+        { start: lunchEndMin, end: workEndMin },
+      ]
+    : [{ start: workStartMin, end: workEndMin }];
+
   // Scan window: tomorrow → +SCAN_DAYS
-  const fromStr = addDays(vnDateStr(new Date()), 1);
-  const toStr = addDays(fromStr, SCAN_DAYS);
-  const scanStart = new Date(`${fromStr}T00:00:00+07:00`);
-  const scanEnd = new Date(`${toStr}T23:59:59+07:00`);
+  const fromStr = addDays(dateStrInTz(new Date(), settings.timezone), 1, settings.timezone, offset);
+  const toStr = addDays(fromStr, SCAN_DAYS, settings.timezone, offset);
+  const scanStart = new Date(`${fromStr}T00:00:00${offset}`);
+  const scanEnd = new Date(`${toStr}T23:59:59${offset}`);
 
   // 1. Fetch all non-cancelled interviews in the scan window from DB
   const { data: dbRows } = await supabaseAdmin
@@ -148,14 +175,15 @@ export async function POST(request: Request) {
     ...calBusy.map((p) => ({ start: p.start, end: p.end })),
   ];
 
-  // 3. Find available slots — only within allowed windows (sáng 10:30-11:30, chiều 14:00-17:00)
+  // 3. Find available slots — chỉ trong ngày/giờ làm việc đã cấu hình, trừ giờ
+  // nghỉ trưa, và né các khoảng bận theo buffer đã cấu hình.
   const available: { start_time: string; end_time: string }[] = [];
 
   for (let dayOffset = 0; dayOffset < SCAN_DAYS && available.length < MAX_SLOTS; dayOffset++) {
-    const dateStr = addDays(fromStr, dayOffset);
-    if (weekday(dateStr) === 0 || weekday(dateStr) === 6) continue; // skip weekend
+    const dateStr = addDays(fromStr, dayOffset, settings.timezone, offset);
+    if (!workDaySet.has(weekday(dateStr, offset))) continue;
 
-    for (const window of TIME_WINDOWS) {
+    for (const window of dayWindows) {
       const windowMaxStart = window.end - duration;
       if (windowMaxStart < window.start) continue; // duration too long for this window
 
@@ -164,10 +192,10 @@ export async function POST(request: Request) {
         startMin <= windowMaxStart && available.length < MAX_SLOTS;
         startMin += SLOT_STEP_MIN
       ) {
-        const slotStart = makeSlot(dateStr, startMin);
-        const slotEnd = makeSlot(dateStr, startMin + duration);
+        const slotStart = makeSlot(dateStr, startMin, offset);
+        const slotEnd = makeSlot(dateStr, startMin + duration, offset);
 
-        if (overlapsAny(slotStart, slotEnd, allBusy)) continue;
+        if (overlapsAny(slotStart, slotEnd, allBusy, bufferMs)) continue;
 
         available.push({
           start_time: slotStart.toISOString(),

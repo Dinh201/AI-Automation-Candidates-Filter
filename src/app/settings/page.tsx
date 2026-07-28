@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  User, Palette, Bell, CalendarDays, Mail,
+  User, Palette, Bell, CalendarDays,
   Sun, Moon, Monitor, Clock,
   Eye, EyeOff, Save, Check,
-  Lock, X, Upload,
+  Lock, Upload,
 } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import { useTranslation } from "@/lib/i18n-context";
@@ -647,19 +647,7 @@ function NotificationsPanel() {
 }
 
 
-const CALENDAR_LS_KEY = "ats_calendar_settings";
-
-type CalendarSettings = {
-  workDays: number[];
-  wStart: string;
-  wEnd: string;
-  lStart: string;
-  lEnd: string;
-  tz: string;
-  buffer: number;
-};
-
-const CALENDAR_DEFAULTS: CalendarSettings = {
+const CALENDAR_DEFAULTS = {
   workDays: [1, 2, 3, 4, 5],
   wStart: "08:00",
   wEnd: "17:30",
@@ -683,31 +671,53 @@ function CalendarPanel() {
   const [tz, setTz] = useState(CALENDAR_DEFAULTS.tz);
   const [buffer, setBuffer] = useState(CALENDAR_DEFAULTS.buffer);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CALENDAR_LS_KEY);
-      if (stored) {
-        const s: CalendarSettings = JSON.parse(stored);
-        setWorkDays(s.workDays ?? CALENDAR_DEFAULTS.workDays);
-        setWStart(s.wStart ?? CALENDAR_DEFAULTS.wStart);
-        setWEnd(s.wEnd ?? CALENDAR_DEFAULTS.wEnd);
-        setLStart(s.lStart ?? CALENDAR_DEFAULTS.lStart);
-        setLEnd(s.lEnd ?? CALENDAR_DEFAULTS.lEnd);
-        setTz(s.tz ?? CALENDAR_DEFAULTS.tz);
-        setBuffer(s.buffer ?? CALENDAR_DEFAULTS.buffer);
-      }
-    } catch { /* ignore corrupt storage */ }
+    fetch("/api/settings/calendar")
+      .then(r => r.json())
+      .then(({ data }) => {
+        if (!data) return;
+        setWorkDays(data.workDays ?? CALENDAR_DEFAULTS.workDays);
+        setWStart(data.workStart ?? CALENDAR_DEFAULTS.wStart);
+        setWEnd(data.workEnd ?? CALENDAR_DEFAULTS.wEnd);
+        setLStart(data.lunchStart ?? CALENDAR_DEFAULTS.lStart);
+        setLEnd(data.lunchEnd ?? CALENDAR_DEFAULTS.lEnd);
+        setTz(data.timezone ?? CALENDAR_DEFAULTS.tz);
+        setBuffer(data.bufferMinutes ?? CALENDAR_DEFAULTS.buffer);
+      })
+      .catch(() => { /* giữ giá trị mặc định nếu tải thất bại */ });
   }, []);
 
   const toggleDay = (id: number) =>
     setWorkDays(p => p.includes(id) ? p.filter(d => d !== id) : [...p, id]);
 
-  const handleSave = () => {
-    const settings: CalendarSettings = { workDays, wStart, wEnd, lStart, lEnd, tz, buffer };
-    localStorage.setItem(CALENDAR_LS_KEY, JSON.stringify(settings));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings/calendar", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workDays, workStart: wStart, workEnd: wEnd,
+          lunchStart: lStart, lunchEnd: lEnd,
+          timezone: tz, bufferMinutes: buffer,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setSaveError(json.error ?? t("settings.calendar.saveError"));
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setSaveError(t("settings.calendar.saveError"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -780,163 +790,10 @@ function CalendarPanel() {
         </div>
       </Card>
 
-      <SaveBar onSave={handleSave} saved={saved} />
-    </div>
-  );
-}
-
-const EMAIL_TMPL_LS_KEY = "ats_email_templates";
-
-const EMAIL_TMPL_DEFAULTS: Record<string, { subject: string; body: string }> = {
-  interview: {
-    subject: "Thư mời phỏng vấn — {{position}} tại ATS Internal",
-    body: `Kính gửi {{candidate_name}},
-
-Cảm ơn bạn đã ứng tuyển vị trí {{position}}.
-
-Chúng tôi vui mừng mời bạn tham gia buổi phỏng vấn:
-📅 Thời gian: {{interview_date}} lúc {{interview_time}}
-🔗 Link tham gia: {{meeting_link}}
-
-Vui lòng xác nhận trong vòng 24 giờ.
-
-Trân trọng,
-{{hr_name}} — Bộ phận Nhân sự`,
-  },
-  rejection: {
-    subject: "Kết quả ứng tuyển — {{position}}",
-    body: `Kính gửi {{candidate_name}},
-
-Cảm ơn bạn đã dành thời gian ứng tuyển vị trí {{position}}.
-
-Sau khi xem xét kỹ lưỡng, chúng tôi rất tiếc thông báo rằng hồ sơ của bạn chưa phù hợp với yêu cầu hiện tại. Chúng tôi sẽ lưu hồ sơ cho các cơ hội trong tương lai.
-
-Trân trọng,
-{{hr_name}}`,
-  },
-  approval: {
-    subject: "Yêu cầu phê duyệt tuyển dụng — {{position}}",
-    body: `Kính gửi {{approver_name}},
-
-Bộ phận HR kính trình để phê duyệt ứng viên sau:
-
-👤 Ứng viên: {{candidate_name}}
-💼 Vị trí: {{position}}
-⭐ Điểm AI: {{ai_score}}/10 ({{ai_decision}})
-
-Vui lòng xem xét và phê duyệt trong hệ thống ATS.
-
-Trân trọng,
-{{hr_name}}`,
-  },
-};
-
-function EmailTemplatesPanel() {
-  const { t } = useTranslation();
-  const TMPL_TABS = [
-    { id: "interview", label: t("settings.emailTemplates.tabInterview"), icon: CalendarDays },
-    { id: "rejection", label: t("settings.emailTemplates.tabRejection"), icon: X },
-    { id: "approval", label: t("settings.emailTemplates.tabApproval"), icon: Check },
-  ];
-
-  const [active, setActive] = useState("interview");
-  const [templates, setTemplates] = useState(EMAIL_TMPL_DEFAULTS);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(EMAIL_TMPL_LS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setTemplates(prev => ({ ...prev, ...parsed }));
-      }
-    } catch { /* ignore corrupt storage */ }
-  }, []);
-  const [saved, setSaved] = useState(false);
-  const [taFocused, setTaFocused] = useState(false);
-  const taRef = useRef<HTMLTextAreaElement>(null);
-
-  const VARS = [
-    "candidate_name", "position", "hr_name", "interview_date",
-    "interview_time", "meeting_link", "ai_score", "ai_decision", "approver_name",
-  ];
-
-  const insertVar = (v: string) => {
-    const ta = taRef.current;
-    if (!ta) return;
-    const s = ta.selectionStart, e = ta.selectionEnd;
-    const ins = `{{${v}}}`;
-    const updated = templates[active].body.substring(0, s) + ins + templates[active].body.substring(e);
-    setTemplates(p => ({ ...p, [active]: { ...p[active], body: updated } }));
-    setTimeout(() => { ta.focus(); ta.setSelectionRange(s + ins.length, s + ins.length); }, 0);
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", gap: 8 }}>
-        {TMPL_TABS.map(t => (
-          <button key={t.id} onClick={() => setActive(t.id)} style={{
-            flex: 1, padding: "10px 12px",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-            background: active === t.id ? "rgba(6,182,212,0.1)" : "var(--stg-btn-bg)",
-            border: `1px solid ${active === t.id ? "rgba(6,182,212,0.35)" : "var(--stg-btn-border)"}`,
-            borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
-            color: active === t.id ? "#22d3ee" : "var(--stg-text-label)",
-            fontSize: 12, fontWeight: 500, transition: "all 0.15s",
-          }}>
-            <t.icon size={13} /> {t.label}
-          </button>
-        ))}
-      </div>
-
-      <Card>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <SettingInput
-            label={t("settings.emailTemplates.emailSubject")}
-            value={templates[active].subject}
-            onChange={v => setTemplates(p => ({ ...p, [active]: { ...p[active], subject: v } }))}
-          />
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--stg-text-label)", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>{t("settings.emailTemplates.emailBody")}</label>
-            <textarea
-              ref={taRef}
-              value={templates[active].body}
-              onChange={e => setTemplates(p => ({ ...p, [active]: { ...p[active], body: e.target.value } }))}
-              rows={13}
-              style={{
-                width: "100%", boxSizing: "border-box",
-                background: "var(--stg-input-bg)",
-                border: `1px solid ${taFocused ? "rgba(6,182,212,0.4)" : "var(--stg-input-border)"}`,
-                borderRadius: 8, padding: 12, fontSize: 13, color: "var(--stg-input-color)",
-                lineHeight: 1.7, outline: "none", resize: "vertical",
-                fontFamily: "ui-monospace, 'Cascadia Code', monospace",
-                transition: "border-color 0.15s",
-              }}
-              onFocus={() => setTaFocused(true)}
-              onBlur={() => setTaFocused(false)}
-            />
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <SectionTitle>{t("settings.emailTemplates.variablesHint")}</SectionTitle>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          {VARS.map(v => (
-            <button key={v} onClick={() => insertVar(v)} style={{
-              padding: "4px 10px", borderRadius: 20,
-              background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)",
-              color: "#a5b4fc", fontSize: 11.5, fontWeight: 500, cursor: "pointer",
-              fontFamily: "ui-monospace, monospace",
-            }}>{`{{${v}}}`}</button>
-          ))}
-        </div>
-      </Card>
-
-      <SaveBar onSave={() => {
-        localStorage.setItem(EMAIL_TMPL_LS_KEY, JSON.stringify(templates));
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
-      }} saved={saved} />
+      {saveError && (
+        <p style={{ fontSize: 12, color: "#f87171", margin: "0 0 4px", textAlign: "right" }}>{saveError}</p>
+      )}
+      <SaveBar onSave={handleSave} saved={saved || saving} />
     </div>
   );
 }
@@ -964,7 +821,6 @@ export default function SettingsPage() {
 
   const ADMIN_TABS: TabDef[] = [
     { id: "calendar",        label: t("settings.nav.calendar"),         icon: CalendarDays, adminOnly: true },
-    { id: "email-templates", label: t("settings.nav.emailTemplates"),   icon: Mail,        adminOnly: true },
   ];
 
   const TITLES: Record<string, { title: string; desc: string }> = {
@@ -972,7 +828,6 @@ export default function SettingsPage() {
     "appearance":      { title: t("settings.appearance.title"),   desc: t("settings.appearance.subtitle") },
     "notifications":   { title: t("settings.nav.notifications"),  desc: t("settings.notifications.subtitle") },
     "calendar":        { title: t("settings.nav.calendar"),       desc: t("settings.calendar.subtitle") },
-    "email-templates": { title: t("settings.nav.emailTemplates"), desc: t("settings.emailTemplates.subtitle") },
   };
 
   useEffect(() => {
@@ -1012,7 +867,6 @@ export default function SettingsPage() {
       case "appearance":       return <AppearancePanel />;
       case "notifications":    return <NotificationsPanel />;
 case "calendar":         return <CalendarPanel />;
-      case "email-templates":  return <EmailTemplatesPanel />;
       default:                 return null;
     }
   };
