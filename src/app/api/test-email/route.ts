@@ -3,6 +3,7 @@ import {
   sendCandidateAppliedNotification,
   sendInterviewInvitation,
   sendHiredNotification,
+  sendRejectedNotification,
 } from "@/services/email-service";
 
 export async function POST(request: Request) {
@@ -17,6 +18,15 @@ export async function POST(request: Request) {
         jobTitle: "Senior Frontend Developer",
       });
       return NextResponse.json({ ok: true, type: "offer" });
+    }
+
+    if (type === "reject") {
+      await sendRejectedNotification({
+        candidateName: "Nguyễn Văn Test",
+        candidateEmail: recipient,
+        jobTitle: "Senior Frontend Developer",
+      });
+      return NextResponse.json({ ok: true, type: "reject" });
     }
 
     if (type === "interview") {

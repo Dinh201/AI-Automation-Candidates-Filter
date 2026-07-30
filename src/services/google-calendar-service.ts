@@ -41,7 +41,15 @@ export function buildGmailOAuthUrl(returnTo?: string): string {
     client_id: process.env.GOOGLE_CLIENT_ID!,
     redirect_uri: process.env.GOOGLE_GMAIL_REDIRECT_URI!,
     response_type: "code",
-    scope: "https://mail.google.com/",
+    // gmail.send: chỉ đủ quyền GỬI mail (dùng bởi email-service.ts) — cố tình
+    // hẹp hơn "https://mail.google.com/" (toàn quyền) vì đó là "restricted
+    // scope" của Google, cần đánh giá bảo mật CASA mới publish "In production"
+    // được. gmail.send là "sensitive scope", publish dễ hơn nhiều.
+    // Lưu ý: điều này có nghĩa kết nối qua nút "Kết nối Gmail" KHÔNG còn đủ
+    // quyền để ĐỌC CV qua Gmail (gmail-reader-service.ts) — chấp nhận được vì
+    // IMAP đã là cơ chế đọc CV chính (xem isImapConfigured()).
+    // userinfo.email: lấy địa chỉ tài khoản vừa kết nối để hiển thị ở Cài đặt.
+    scope: "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email",
     access_type: "offline",
     prompt: "consent",
     ...(returnTo ? { state: returnTo } : {}),

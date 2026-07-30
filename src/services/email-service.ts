@@ -1,25 +1,54 @@
-import nodemailer from "nodemailer";
+import MailComposer from "nodemailer/lib/mail-composer";
+import { getGmailAccessToken } from "@/lib/gmail-oauth";
 
+// Hộp thư GỬI email (thư mời phỏng vấn, kết quả tuyển dụng...) — tài khoản
+// Gmail thật, kết nối qua nút "Kết nối Gmail" ở Cài đặt (token lưu trong bảng
+// hr_gmail_tokens), tách biệt hoàn toàn khỏi hộp IMAP dùng để quét CV.
+//
+// Gửi trực tiếp qua Gmail REST API (messages.send), KHÔNG qua SMTP — vì SMTP
+// XOAUTH2 của Gmail đòi hỏi scope rộng "https://mail.google.com/" (Google xếp
+// loại "restricted", cần đánh giá bảo mật CASA mới publish "In production"
+// được). Gmail API cho phép gửi chỉ với scope hẹp "gmail.send" (loại
+// "sensitive", publish dễ hơn nhiều) — dùng MailComposer của nodemailer để
+// build đúng định dạng MIME (base64url) rồi POST thẳng lên Gmail API.
 const GMAIL_USER = process.env.GMAIL_USER || "";
 const HR_EMAIL = process.env.HR_EMAIL || "";
 const COMPANY = "VACONS";
 const COMPANY_VI = "CÔNG TY TNHH KIẾN TRÚC XÂY DỰNG VIỆT AN (VACONS)";
-const COMPANY_EN = "VIET AN CONSTRUCTION ARCHITECTURE COMPANY LIMITED (VACONS)";
+const COMPANY_EN = "VIET AN CONSTRUCTION ARCHITECTURE COMPANY (VACONS)";
 const OFFICE_ADDRESS_VI = "Số 25, Đường 34, Phường An Khánh, TP. Hồ Chí Minh";
 const OFFICE_ADDRESS_EN = "No. 25, Street No. 34, An Khanh Ward, Ho Chi Minh City";
 const WEBSITE = "https://vacons.com.vn/";
 
-function createTransporter() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      type: "OAuth2",
-      user: GMAIL_USER,
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-    },
+async function sendGmail(mail: { from: string; to: string; subject: string; html: string }): Promise<void> {
+  const accessToken = await getGmailAccessToken();
+
+  const composer = new MailComposer({
+    from: mail.from,
+    to: mail.to,
+    subject: mail.subject,
+    html: mail.html,
   });
+  const buffer = await composer.compile().build();
+  const raw = buffer
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ raw }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gmail API gửi mail thất bại: ${err}`);
+  }
 }
 
 function formatDate(date: Date): string {
@@ -282,16 +311,15 @@ function buildInterviewNotifyInterviewer(data: InterviewEmailData): string {
 
 export async function sendInterviewInvitation(data: InterviewEmailData) {
   if (!GMAIL_USER) throw new Error("GMAIL_USER chưa được cấu hình");
-  const transporter = createTransporter();
 
   const [candidateResult, interviewerResult] = await Promise.allSettled([
-    transporter.sendMail({
+    sendGmail({
       from: `${COMPANY} Recruitment <${GMAIL_USER}>`,
       to: data.candidateEmail,
       subject: `[${COMPANY}] Thư mời phỏng vấn – ${data.jobTitle}`,
       html: buildInterviewInviteCandidate(data),
     }),
-    transporter.sendMail({
+    sendGmail({
       from: `${COMPANY} HR <${GMAIL_USER}>`,
       to: data.interviewerEmail,
       subject: `[${COMPANY}] Lịch phỏng vấn: ${data.candidateName} – ${data.jobTitle}`,
@@ -353,8 +381,7 @@ function buildHiredHtml(data: OutcomeEmailData): string {
 
 export async function sendHiredNotification(data: OutcomeEmailData): Promise<void> {
   if (!GMAIL_USER) throw new Error("GMAIL_USER chưa được cấu hình");
-  const transporter = createTransporter();
-  await transporter.sendMail({
+  await sendGmail({
     from: `${COMPANY} HR <${GMAIL_USER}>`,
     to: data.candidateEmail,
     subject: `[${COMPANY}] Chúc mừng! Bạn đã được tuyển dụng – ${data.jobTitle}`,
@@ -410,8 +437,7 @@ function buildRejectedHtml(data: OutcomeEmailData): string {
 
 export async function sendRejectedNotification(data: OutcomeEmailData): Promise<void> {
   if (!GMAIL_USER) throw new Error("GMAIL_USER chưa được cấu hình");
-  const transporter = createTransporter();
-  await transporter.sendMail({
+  await sendGmail({
     from: `${COMPANY} HR <${GMAIL_USER}>`,
     to: data.candidateEmail,
     subject: `[${COMPANY}] Kết quả ứng tuyển – ${data.jobTitle}`,
@@ -459,8 +485,7 @@ function buildCandidateAppliedHtml(data: CandidateAppliedData): string {
 
 export async function sendCandidateAppliedNotification(data: CandidateAppliedData): Promise<void> {
   if (!HR_EMAIL || !GMAIL_USER) return;
-  const transporter = createTransporter();
-  await transporter.sendMail({
+  await sendGmail({
     from: `${COMPANY} Recruitment <${GMAIL_USER}>`,
     to: HR_EMAIL,
     subject: `[${COMPANY}] Hồ sơ mới: ${data.candidateName} – ${data.jobTitle}`,
@@ -473,14 +498,13 @@ export async function sendCandidateAppliedToEmails(
   data: CandidateAppliedData
 ): Promise<void> {
   if (!GMAIL_USER || emails.length === 0) return;
-  const transporter = createTransporter();
   const sends = emails.map((to) =>
-    transporter.sendMail({
+    sendGmail({
       from: `${COMPANY} Recruitment <${GMAIL_USER}>`,
       to,
       subject: `[${COMPANY}] Hồ sơ mới: ${data.candidateName} – ${data.jobTitle}`,
       html: buildCandidateAppliedHtml(data),
-    }).catch((err) => console.warn(`[email] Gửi thất bại cho ${to}:`, err))
+    }).catch((err: unknown) => console.warn(`[email] Gửi thất bại cho ${to}:`, err))
   );
   await Promise.allSettled(sends);
 }
@@ -538,15 +562,14 @@ export async function sendInterviewHRNotification(
   }
 ): Promise<void> {
   if (!GMAIL_USER || emails.length === 0) return;
-  const transporter = createTransporter();
   const html = buildInterviewHRNotifyHtml(data);
   const sends = emails.map((to) =>
-    transporter.sendMail({
+    sendGmail({
       from: `${COMPANY} HR <${GMAIL_USER}>`,
       to,
       subject: `[${COMPANY}] Lịch PV mới: ${data.candidateName} – ${data.jobTitle}`,
       html,
-    }).catch((err) => console.warn(`[email] Gửi HR interview notify thất bại cho ${to}:`, err))
+    }).catch((err: unknown) => console.warn(`[email] Gửi HR interview notify thất bại cho ${to}:`, err))
   );
   await Promise.allSettled(sends);
 }

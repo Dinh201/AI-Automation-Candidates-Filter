@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  User, Palette, Bell, CalendarDays,
+  User, Palette, Bell, CalendarDays, Mail,
   Sun, Moon, Monitor, Clock,
   Eye, EyeOff, Save, Check,
   Lock, Upload,
@@ -798,6 +798,95 @@ function CalendarPanel() {
   );
 }
 
+type GmailSenderStatus = { connected: boolean; email: string | null };
+
+function GmailConnectPanel() {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<GmailSenderStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [banner, setBanner] = useState<"success" | "error" | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gmail_connected") === "1") {
+      setBanner("success");
+      window.history.replaceState({}, "", "/settings");
+    } else if (params.get("gmail_error")) {
+      setBanner("error");
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/gmail/sender-status")
+      .then(r => r.json())
+      .then((data: GmailSenderStatus) => setStatus(data))
+      .catch(() => setStatus({ connected: false, email: null }))
+      .finally(() => setLoading(false));
+  }, [banner]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {banner === "success" && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 10, fontSize: 13,
+          background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80",
+        }}>
+          {t("settings.gmail.successBanner")}
+        </div>
+      )}
+      {banner === "error" && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 10, fontSize: 13,
+          background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.25)", color: "#f87171",
+        }}>
+          {t("settings.gmail.errorBanner")}
+        </div>
+      )}
+
+      <Card>
+        <SectionTitle>{t("settings.gmail.statusTitle")}</SectionTitle>
+        <p style={{ fontSize: 12.5, color: "var(--stg-text-dim)", margin: "0 0 16px", lineHeight: 1.6 }}>
+          {t("settings.gmail.description")}
+        </p>
+
+        {loading ? (
+          <p style={{ fontSize: 13, color: "var(--stg-text-dim)" }}>{t("settings.notifications.loading")}</p>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                background: status?.connected ? "#22c55e" : "#64748b",
+              }} />
+              <div>
+                <p style={{ fontSize: 13.5, fontWeight: 500, color: "var(--stg-text-body)", margin: "0 0 2px" }}>
+                  {status?.connected ? t("settings.gmail.connected") : t("settings.gmail.notConnected")}
+                </p>
+                {status?.connected && status.email && (
+                  <p style={{ fontSize: 12, color: "var(--stg-text-dim)", margin: 0 }}>{status.email}</p>
+                )}
+              </div>
+            </div>
+
+            <a
+              href="/api/gmail/connect?return_to=/settings"
+              style={{
+                fontSize: 12.5, fontWeight: 600, padding: "8px 16px", borderRadius: 8,
+                background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.25)",
+                color: "#22d3ee", textDecoration: "none", whiteSpace: "nowrap",
+              }}
+            >
+              {status?.connected ? t("settings.gmail.reconnectBtn") : t("settings.gmail.connectBtn")}
+            </a>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 /* ══════════════════════ MAIN PAGE ═══════════════════════════════════ */
 
 type TabDef = {
@@ -821,6 +910,7 @@ export default function SettingsPage() {
 
   const ADMIN_TABS: TabDef[] = [
     { id: "calendar",        label: t("settings.nav.calendar"),         icon: CalendarDays, adminOnly: true },
+    { id: "gmail",           label: t("settings.nav.gmail"),            icon: Mail,          adminOnly: true },
   ];
 
   const TITLES: Record<string, { title: string; desc: string }> = {
@@ -828,6 +918,7 @@ export default function SettingsPage() {
     "appearance":      { title: t("settings.appearance.title"),   desc: t("settings.appearance.subtitle") },
     "notifications":   { title: t("settings.nav.notifications"),  desc: t("settings.notifications.subtitle") },
     "calendar":        { title: t("settings.nav.calendar"),       desc: t("settings.calendar.subtitle") },
+    "gmail":           { title: t("settings.nav.gmail"),          desc: t("settings.gmail.subtitle") },
   };
 
   useEffect(() => {
@@ -867,6 +958,7 @@ export default function SettingsPage() {
       case "appearance":       return <AppearancePanel />;
       case "notifications":    return <NotificationsPanel />;
 case "calendar":         return <CalendarPanel />;
+      case "gmail":            return <GmailConnectPanel />;
       default:                 return null;
     }
   };

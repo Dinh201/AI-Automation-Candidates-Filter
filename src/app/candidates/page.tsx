@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Users, Search, Filter, ArrowUpDown, ExternalLink, Trash2, Mail, CheckCircle2, AlertCircle, RefreshCw, X } from "lucide-react";
+import { Users, Search, ArrowUpDown, ExternalLink, Trash2, Mail, CheckCircle2, AlertCircle, RefreshCw, RotateCcw, X } from "lucide-react";
 
 import { CandidateScoringResult } from "@/services/ai/schema";
 import { useTranslation } from "@/lib/i18n-context";
+import { FilterSelect, type FilterOption } from "@/components/filter-select";
 
 type Candidate = {
   id: string;
@@ -85,6 +86,21 @@ export default function CandidatesPage() {
     };
     return { label: labelMap[status] ?? status, className: statusClassName(status) };
   }
+
+  const statusOptions: FilterOption[] = STATUS_VALUES.map((v) => ({
+    value: v,
+    label: v === "" ? t("common.all") : statusConfig(v).label,
+    colorClassName: v === "" ? undefined : statusConfig(v).className,
+    variant: "dot",
+  }));
+
+  const decisionOptions: FilterOption[] = DECISION_VALUES.map((v) => ({
+    value: v,
+    label: v === "" ? t("common.all") : decisionConfig(v).label,
+    colorClassName: v === "" ? undefined : decisionConfig(v).className,
+    variant: "badge",
+  }));
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -134,6 +150,14 @@ export default function CandidatesPage() {
       .then(({ data }) => setCandidates(data ?? []))
       .finally(() => setLoading(false));
   }, []);
+
+  const hasActiveFilters = !!search || !!statusFilter || !!decisionFilter;
+
+  function clearFilters() {
+    setSearch("");
+    setStatusFilter("");
+    setDecisionFilter("");
+  }
 
   async function handleScanGmail() {
     setScanning(true);
@@ -412,7 +436,7 @@ export default function CandidatesPage() {
       )}
 
       {/* Filters */}
-      <div className="glass-card p-4 flex flex-wrap gap-3">
+      <div className="glass-card p-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-52">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
           <input
@@ -422,38 +446,31 @@ export default function CandidatesPage() {
             className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
           />
         </div>
-        <div className="flex items-center gap-1.5">
-          <Filter className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
-          >
-            {STATUS_VALUES.map((v) => {
-              const labels: Record<string, string> = {
-                "": t("common.all"),
-                New: t("status.new"),
-                Scoring: t("status.scoring"),
-                Scored: t("status.scored"),
-                Interviewing: t("status.interviewing"),
-                Hired: t("status.hired"),
-                Rejected: t("status.rejected"),
-              };
-              return <option key={v} value={v} className="bg-white dark:bg-slate-900">{labels[v] ?? v}</option>;
-            })}
-          </select>
-        </div>
-        <select
+
+        <FilterSelect
+          label={t("candidates.col.status")}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={statusOptions}
+        />
+
+        <FilterSelect
+          label={t("candidates.col.decision")}
           value={decisionFilter}
-          onChange={(e) => setDecisionFilter(e.target.value)}
-          className="bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
-        >
-          {DECISION_VALUES.map((v) => (
-            <option key={v} value={v} className="bg-white dark:bg-slate-900">
-              {v === "" ? t("common.all") : v}
-            </option>
-          ))}
-        </select>
+          onChange={setDecisionFilter}
+          options={decisionOptions}
+        />
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            {t("candidates.clearFilters")}
+          </button>
+        )}
       </div>
 
       {/* Bulk action bar */}

@@ -124,6 +124,7 @@ export const en = {
     },
     search: "Search by name, email, position...",
     filterAll: "All",
+    clearFilters: "Clear filters",
     sortDate: "Applied date",
     sortScore: "Score",
     deleteConfirmPrefix: 'Delete candidate "',
@@ -301,6 +302,7 @@ export const en = {
       notifications: "Notifications",
       aiConfig: "AI Configuration",
       calendar: "Calendar Integration",
+      gmail: "Send Email (Gmail)",
     },
     appearance: {
       title: "Appearance & Display",
@@ -378,6 +380,17 @@ export const en = {
       daySat: "Sat",
       daySun: "Sun",
       saveError: "Could not save settings. Please try again.",
+    },
+    gmail: {
+      subtitle: "Gmail account used to send interview invitations and hiring results",
+      statusTitle: "Connection status",
+      description: "This is the Gmail account that actually sends emails to candidates — separate from the IMAP inbox used to scan CVs.",
+      connected: "Connected",
+      notConnected: "Not connected",
+      connectBtn: "Connect Gmail",
+      reconnectBtn: "Reconnect",
+      successBanner: "Gmail connected successfully!",
+      errorBanner: "Gmail connection failed. Please try again.",
     },
   },
   cvAnalyzer: {

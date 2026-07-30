@@ -124,6 +124,7 @@ export const vi = {
     },
     search: "Tìm theo tên, email, vị trí...",
     filterAll: "Tất cả",
+    clearFilters: "Xóa bộ lọc",
     sortDate: "Ngày nộp",
     sortScore: "Điểm số",
     deleteConfirmPrefix: 'Xóa ứng viên "',
@@ -301,6 +302,7 @@ export const vi = {
       notifications: "Thông báo",
       aiConfig: "Cấu hình AI",
       calendar: "Lịch làm việc",
+      gmail: "Gửi email (Gmail)",
     },
     appearance: {
       title: "Giao diện & Hiển thị",
@@ -378,6 +380,17 @@ export const vi = {
       daySat: "T7",
       daySun: "CN",
       saveError: "Không thể lưu cấu hình. Vui lòng thử lại.",
+    },
+    gmail: {
+      subtitle: "Tài khoản Gmail dùng để gửi thư mời phỏng vấn và kết quả tuyển dụng",
+      statusTitle: "Trạng thái kết nối",
+      description: "Đây là tài khoản Gmail thực sự gửi email cho ứng viên — tách biệt với hộp thư IMAP dùng để quét CV.",
+      connected: "Đã kết nối",
+      notConnected: "Chưa kết nối",
+      connectBtn: "Kết nối Gmail",
+      reconnectBtn: "Kết nối lại",
+      successBanner: "Kết nối Gmail thành công!",
+      errorBanner: "Kết nối Gmail thất bại. Vui lòng thử lại.",
     },
   },
   cvAnalyzer: {
