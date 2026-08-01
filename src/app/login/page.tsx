@@ -1,140 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { StarLogo } from "@/components/star-logo";
-
-/* ── Animated fluid-ribbon canvas ───────────────────────────── */
-function FluidCanvas() {
-  const ref = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let raf = 0;
-    const t0 = Date.now();
-    let W = 0;
-    let H = 0;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    const resize = () => {
-      W = canvas.offsetWidth;
-      H = canvas.offsetHeight;
-      if (W > 0 && H > 0) {
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-    };
-    resize();
-
-    /* Ribbon definitions — hot pink → magenta → purple → blue → cyan */
-    const bands = [
-      { y: 0.06, a: 0.20, s: 0.22, ph: 0.0, c: "#ff0066" },
-      { y: 0.19, a: 0.22, s: 0.27, ph: 1.2, c: "#e91e8c" },
-      { y: 0.31, a: 0.18, s: 0.31, ph: 2.1, c: "#c2185b" },
-      { y: 0.43, a: 0.20, s: 0.34, ph: 0.7, c: "#9c27b0" },
-      { y: 0.55, a: 0.17, s: 0.29, ph: 3.2, c: "#7b1fa2" },
-      { y: 0.66, a: 0.19, s: 0.37, ph: 1.9, c: "#3f51b5" },
-      { y: 0.77, a: 0.21, s: 0.26, ph: 2.8, c: "#1565c0" },
-      { y: 0.89, a: 0.18, s: 0.32, ph: 4.1, c: "#0097a7" },
-    ];
-
-    const N = 80;
-
-    const render = () => {
-      if (W === 0 || H === 0) {
-        resize();
-        raf = requestAnimationFrame(render);
-        return;
-      }
-      const t = (Date.now() - t0) / 1000;
-
-      ctx.fillStyle = "#06000f";
-      ctx.fillRect(0, 0, W, H);
-
-      for (const b of bands) {
-        const thick = H * 0.18;
-        const top: number[][] = [];
-        const bot: number[][] = [];
-
-        for (let i = 0; i <= N; i++) {
-          const x = (i / N) * W;
-          const p = i / N;
-          const w1 = Math.sin(b.ph + p * Math.PI * 2.8 + t * b.s) * b.a * H;
-          const w2 = Math.sin(b.ph * 1.6 + p * Math.PI * 4.8 + t * b.s * 0.7) * b.a * H * 0.38;
-          const cy = b.y * H + w1 + w2;
-          top.push([x, cy - thick / 2]);
-          bot.push([x, cy + thick / 2]);
-        }
-
-        /* Ribbon body */
-        const g = ctx.createLinearGradient(0, 0, W, 0);
-        g.addColorStop(0,    b.c + "00");
-        g.addColorStop(0.07, b.c + "e0");
-        g.addColorStop(0.5,  b.c + "ff");
-        g.addColorStop(0.93, b.c + "e0");
-        g.addColorStop(1,    b.c + "00");
-
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-        ctx.globalAlpha = 0.65;
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(top[0][0], top[0][1]);
-        for (let i = 1; i <= N; i++) ctx.lineTo(top[i][0], top[i][1]);
-        for (let i = N; i >= 0; i--) ctx.lineTo(bot[i][0], bot[i][1]);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-
-        /* Highlight streak near top edge */
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-        ctx.globalAlpha = 0.28;
-        const gh = ctx.createLinearGradient(0, 0, W, 0);
-        gh.addColorStop(0,    "rgba(255,255,255,0)");
-        gh.addColorStop(0.12, "rgba(255,255,255,1)");
-        gh.addColorStop(0.55, "rgba(255,255,255,0.55)");
-        gh.addColorStop(0.88, "rgba(255,255,255,0.35)");
-        gh.addColorStop(1,    "rgba(255,255,255,0)");
-        ctx.fillStyle = gh;
-        const hs = thick * 0.1;
-        ctx.beginPath();
-        ctx.moveTo(top[0][0], top[0][1]);
-        for (let i = 1; i <= N; i++) ctx.lineTo(top[i][0], top[i][1]);
-        for (let i = N; i >= 0; i--) ctx.lineTo(top[i][0], top[i][1] + hs);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-
-      raf = requestAnimationFrame(render);
-    };
-
-    render();
-
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={ref}
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
-    />
-  );
-}
 
 /* ── Shared input style helper ── */
 const inputStyle: React.CSSProperties = {
@@ -464,13 +334,17 @@ export default function LoginPage() {
         .lp-btn:hover:not(:disabled) { background: rgba(255,255,255,0.18) !important; }
       `}</style>
 
-      {/* ── Full-page animated background ── */}
-      <div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
-        <FluidCanvas />
-      </div>
+      {/* ── Full-page background image ── */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 0,
+        backgroundImage: "url('/background.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }} />
       <div style={{
         position: "fixed", inset: 0, zIndex: 1,
-        background: "radial-gradient(ellipse at 60% 50%, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.55) 100%)",
+        background: "radial-gradient(ellipse at 60% 50%, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.62) 100%)",
         pointerEvents: "none",
       }} />
 
@@ -490,7 +364,7 @@ export default function LoginPage() {
             boxShadow: "0 40px 100px rgba(0,0,0,0.8)",
           }}
         >
-          {/* ── LEFT: transparent — background canvas shows through ── */}
+          {/* ── LEFT: transparent — full-page background image shows through ── */}
           <div className="lp-left" style={{ position: "relative", overflow: "hidden" }}>
             <div style={{
               position: "absolute", inset: 0,

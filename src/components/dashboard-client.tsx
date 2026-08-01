@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   Users, Briefcase, TrendingUp, ArrowRight, Clock,
-  Activity, Calendar, Target, BarChart2, Video, ChevronRight,
+  Activity, Calendar, Target, BarChart2, Video, ChevronRight, Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n-context";
 import { CandidateScoringResult } from "@/services/ai/schema";
@@ -221,8 +221,9 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         <div className="flex items-center gap-2">
           <Link
             href="/cv-analyzer"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ats-btn-primary"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold ats-btn-primary"
           >
+            <Sparkles className="w-4 h-4" />
             {t("dashboard.newCvAnalysis")}
           </Link>
         </div>

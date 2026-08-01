@@ -6,7 +6,8 @@ export type AuditAction =
   | "candidate_status_changed"
   | "candidate_deleted"
   | "interview_scheduled"
-  | "interview_outcome";
+  | "interview_outcome"
+  | "interview_invite_sent";
 
 interface AuditParams {
   entity_type: "candidate" | "interview" | "job";

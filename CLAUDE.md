@@ -215,7 +215,7 @@ Keep weights configurable per job/rubric.
 ### Scheduling Requirements
 1. HR chooses: candidate, interviewer, duration, date range.
 2. Read Google Calendar free/busy.
-3. Calculate available slots → suggest 3–5.
+3. Calculate available slots → suggest a full week (≥7 working days), all free slots per day, grouped by day so HR/candidate can actively pick any day + time (not limited to a handful of picked options).
 4. HR confirms a slot.
 5. Re-check free/busy before creating event (prevent race condition).
 6. Create Google Calendar event → save interview in DB → send email invitation.

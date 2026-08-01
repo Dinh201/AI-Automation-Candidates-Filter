@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Calendar, Clock, User, ExternalLink, CheckCircle2, XCircle, AlertCircle, UserCheck, UserX, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n-context";
+import { InterviewOutcomeModal } from "@/components/interview-outcome-modal";
 
 type Interview = {
   id: string;
@@ -118,20 +119,28 @@ export default function InterviewsPage() {
     (i) => i.status !== "Scheduled" || new Date(i.start_time) < new Date()
   );
 
-  async function recordOutcome(interviewId: string, outcome: "Hired" | "Rejected") {
-    setSubmitting(interviewId + outcome);
+  // Gửi mail kết quả tự thân trong InterviewOutcomeModal (HR chỉnh nội dung
+  // trước khi gửi) — chỉ cần cập nhật lại state hiển thị sau khi gửi xong.
+  function handleOutcomeSent(interviewId: string, outcome: "Hired" | "Rejected") {
+    setInterviews((prev) =>
+      prev.map((i) =>
+        i.id === interviewId
+          ? { ...i, candidates: i.candidates ? { ...i.candidates, status: outcome } : null }
+          : i
+      )
+    );
+  }
+
+  async function markCompleted(interviewId: string) {
+    setSubmitting(interviewId + "Complete");
     try {
       await fetch(`/api/interviews/${interviewId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Completed", outcome }),
+        body: JSON.stringify({ status: "Completed" }),
       });
       setInterviews((prev) =>
-        prev.map((i) =>
-          i.id === interviewId
-            ? { ...i, status: "Completed", candidates: i.candidates ? { ...i.candidates, status: outcome } : null }
-            : i
-        )
+        prev.map((i) => (i.id === interviewId ? { ...i, status: "Completed" } : i))
       );
     } finally {
       setSubmitting(null);
@@ -160,6 +169,8 @@ export default function InterviewsPage() {
     const accent = statusAccentColor(iv.status);
     const start = new Date(iv.start_time);
     const end = new Date(iv.end_time);
+    const isCancelled = iv.status === "Cancelled";
+    const hasOutcome = iv.candidates?.status === "Hired" || iv.candidates?.status === "Rejected";
 
     return (
       <div style={{
@@ -169,6 +180,7 @@ export default function InterviewsPage() {
         boxShadow: "var(--ats-card-shadow)",
         borderRadius: "12px",
         padding: "20px",
+        opacity: isCancelled ? 0.55 : 1,
       }} className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -232,12 +244,20 @@ export default function InterviewsPage() {
           )}
         </div>
 
-        {iv.status === "Scheduled" && new Date(iv.start_time) >= new Date() && (
-          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3">
+        {iv.status === "Scheduled" && (
+          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3 flex gap-2">
+            <button
+              onClick={() => markCompleted(iv.id)}
+              disabled={submitting === iv.id + "Complete"}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors disabled:opacity-50"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {submitting === iv.id + "Complete" ? t("interviews.completing") : t("interviews.markCompleted")}
+            </button>
             <button
               onClick={() => cancelInterview(iv.id)}
               disabled={submitting === iv.id + "Cancel"}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
             >
               <XCircle className="w-3.5 h-3.5" />
               {submitting === iv.id + "Cancel" ? t("interviews.cancelling") : t("interviews.cancelInterview")}
@@ -245,27 +265,14 @@ export default function InterviewsPage() {
           </div>
         )}
 
-        {iv.status === "Scheduled" && new Date(iv.start_time) < new Date() && (
-          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3 space-y-2">
-            <p className="text-xs" style={{ color: "var(--ats-text-muted)" }}>{t("interviews.recordOutcomeLabel")}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => recordOutcome(iv.id, "Hired")}
-                disabled={submitting === iv.id + "Hired"}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors disabled:opacity-50"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                {submitting === iv.id + "Hired" ? t("common.saving") : t("interviews.hired")}
-              </button>
-              <button
-                onClick={() => recordOutcome(iv.id, "Rejected")}
-                disabled={submitting === iv.id + "Rejected"}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/15 border border-red-500/25 text-red-400 text-xs font-medium hover:bg-red-500/25 transition-colors disabled:opacity-50"
-              >
-                <UserX className="w-3.5 h-3.5" />
-                {submitting === iv.id + "Rejected" ? t("common.saving") : t("interviews.rejected")}
-              </button>
-            </div>
+        {iv.status === "Completed" && !hasOutcome && (
+          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3">
+            <InterviewOutcomeModal
+              interviewId={iv.id}
+              candidateName={iv.candidates?.name ?? "—"}
+              jobTitle={iv.candidates?.jobs?.title ?? null}
+              onSent={(outcome) => handleOutcomeSent(iv.id, outcome)}
+            />
           </div>
         )}
       </div>

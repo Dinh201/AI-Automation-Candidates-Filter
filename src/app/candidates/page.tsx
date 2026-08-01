@@ -541,7 +541,7 @@ export default function CandidatesPage() {
                       {t("candidates.col.date")} <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="px-3 py-3" />
+                  <th className="px-3 py-3 sticky right-0 border-l border-slate-200 dark:border-white/[0.06]" style={{ background: "var(--ats-surface)" }} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
@@ -563,11 +563,11 @@ export default function CandidatesPage() {
                           className="w-3.5 h-3.5 rounded accent-indigo-500 cursor-pointer"
                         />
                       </td>
-                      <td className="px-3 py-3">
-                        <p className="font-medium text-slate-900 dark:text-white">{c.name}</p>
-                        <p className="text-xs text-slate-500">{c.email}</p>
+                      <td className="px-3 py-3 max-w-[220px]">
+                        <p className="font-medium text-slate-900 dark:text-white truncate" title={c.name}>{c.name}</p>
+                        <p className="text-xs text-slate-500 truncate" title={c.email}>{c.email}</p>
                       </td>
-                      <td className="px-3 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap text-xs">{c.jobs?.title ?? "—"}</td>
+                      <td className="px-3 py-3 text-slate-600 dark:text-slate-300 text-xs max-w-[160px] truncate" title={c.jobs?.title ?? undefined}>{c.jobs?.title ?? "—"}</td>
                       <td className="px-3 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${statusCfg.className}`}>
                           {statusCfg.label}
@@ -590,18 +590,21 @@ export default function CandidatesPage() {
                       <td className="px-3 py-3 ats-text-muted text-xs whitespace-nowrap">
                         {new Date(c.created_at).toLocaleDateString(locale)}
                       </td>
-                      <td className="px-3 py-3">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-3">
+                      <td
+                        className={`px-3 py-3 sticky right-0 border-l border-slate-200 dark:border-white/[0.06] ${isSelected ? "bg-indigo-50 dark:bg-indigo-500/[0.06]" : ""}`}
+                        style={isSelected ? undefined : { background: "var(--ats-surface)" }}
+                      >
+                        <div className="flex items-center gap-3">
                           <Link
                             href={`/candidates/${c.id}`}
-                            className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300"
+                            className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 whitespace-nowrap"
                           >
                             <ExternalLink className="w-3 h-3" /> {t("candidates.actionDetail")}
                           </Link>
                           <button
                             onClick={() => handleDelete(c.id, c.name)}
                             disabled={deletingId === c.id}
-                            className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-400 disabled:opacity-40"
+                            className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-400 disabled:opacity-40 whitespace-nowrap"
                           >
                             <Trash2 className="w-3 h-3" />
                             {deletingId === c.id ? t("candidates.actionDeleting") : t("candidates.deleteSelected")}

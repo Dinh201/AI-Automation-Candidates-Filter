@@ -47,10 +47,10 @@ const LineHeight = Extension.create({
 });
 
 const LINE_HEIGHTS = [
-  { label: "Single (1.0)", value: "1.0" },
-  { label: "Default (1.15)", value: "1.15" },
-  { label: "OneAndHalf (1.5)", value: "1.5" },
-  { label: "Double (2.0)", value: "2.0" },
+  { label: "Đơn (1.0)", value: "1.0" },
+  { label: "Mặc định (1.15)", value: "1.15" },
+  { label: "1.5 dòng (1.5)", value: "1.5" },
+  { label: "Đôi (2.0)", value: "2.0" },
 ];
 
 function TBtn({
@@ -173,7 +173,7 @@ function Toolbar({ editor }: { editor: Editor | null }) {
             e.target.value = "";
           }
         }}
-        className="text-[11px] bg-[var(--ats-surface)] border border-[var(--ats-border)] text-[var(--ats-text-muted)] rounded px-1.5 py-0.5 focus:outline-none focus:border-indigo-500/50 cursor-pointer hover:text-[var(--ats-text-h)] transition-colors"
+        className="text-[11px] min-w-[92px] bg-[var(--ats-surface)] border border-[var(--ats-border)] text-[var(--ats-text-muted)] rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500/50 cursor-pointer hover:text-[var(--ats-text-h)] transition-colors"
       >
         <option value="" disabled>
           Giãn dòng

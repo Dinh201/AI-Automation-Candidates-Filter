@@ -101,9 +101,11 @@ jest.mock("@/services/google-calendar-service", () => ({
   refreshAccessToken: jest.fn(),
 }));
 
-// Email và audit mocks
+// Email và audit mocks — candidate invite giờ được soạn/gửi riêng ở bước sau
+// (xem InviteInterviewModal), route schedule chỉ còn gửi thông báo nội bộ.
 jest.mock("@/services/email-service", () => ({
-  sendInterviewInvitation: jest.fn().mockResolvedValue({ partial: false, errors: [] }),
+  sendInterviewerNotification: jest.fn().mockResolvedValue(undefined),
+  sendInterviewHRNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("@/services/audit-service", () => ({
   logAudit: jest.fn(),

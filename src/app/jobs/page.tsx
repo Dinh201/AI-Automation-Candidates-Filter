@@ -554,9 +554,11 @@ export default function JobsPage() {
                 <h2 className="text-base font-semibold text-[var(--ats-text-h)]">
                   {editingJob ? t("jobs.form.editTitle") : t("jobs.form.createTitle")}
                 </h2>
-                <p className="text-xs text-[var(--ats-text-muted)] mt-0.5">
-                  {editingJob ? `ID: ${editingJob.id.slice(0, 8)}…` : t("jobs.form.jobTitlePlaceholder")}
-                </p>
+                {editingJob && (
+                  <p className="text-xs text-[var(--ats-text-muted)] mt-0.5">
+                    ID: {editingJob.id.slice(0, 8)}…
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setModalOpen(false)}
@@ -582,30 +584,32 @@ export default function JobsPage() {
                   />
                 </div>
 
-                <div>
-                  <FieldLabel>{t("jobs.form.statusLabel")}</FieldLabel>
-                  <div className="flex gap-2">
-                    {([
-                      { value: "Open" as const, label: t("jobs.form.statusOpenLabel"), desc: t("jobs.form.statusOpenDesc") },
-                      { value: "Closed" as const, label: t("jobs.form.statusClosedLabel"), desc: t("jobs.form.statusClosedDesc") },
-                    ]).map((s) => (
-                      <button
-                        key={s.value}
-                        type="button"
-                        onClick={() => set("status", s.value)}
-                        className={`flex-1 py-2.5 px-3 rounded-xl text-left border transition-colors ${form.status === s.value
-                            ? s.value === "Open"
-                              ? "bg-green-500/10 border-green-500/30 text-green-300"
-                              : "bg-red-500/10 border-red-500/30 text-red-300"
-                            : "border-[var(--ats-border)] text-[var(--ats-text-muted)] hover:bg-[var(--ats-surface-2)] hover:text-[var(--ats-text-h)]"
-                          }`}
-                      >
-                        <p className="text-xs font-semibold">{s.label}</p>
-                        <p className="text-[10px] opacity-60 mt-0.5">{s.desc}</p>
-                      </button>
-                    ))}
+                {editingJob && (
+                  <div>
+                    <FieldLabel>{t("jobs.form.statusLabel")}</FieldLabel>
+                    <div className="flex gap-2">
+                      {([
+                        { value: "Open" as const, label: t("jobs.form.statusOpenLabel"), desc: t("jobs.form.statusOpenDesc") },
+                        { value: "Closed" as const, label: t("jobs.form.statusClosedLabel"), desc: t("jobs.form.statusClosedDesc") },
+                      ]).map((s) => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => set("status", s.value)}
+                          className={`flex-1 py-2.5 px-3 rounded-xl text-left border transition-colors ${form.status === s.value
+                              ? s.value === "Open"
+                                ? "bg-green-500/10 border-green-500/30 text-green-300"
+                                : "bg-red-500/10 border-red-500/30 text-red-300"
+                              : "border-[var(--ats-border)] text-[var(--ats-text-muted)] hover:bg-[var(--ats-surface-2)] hover:text-[var(--ats-text-h)]"
+                            }`}
+                        >
+                          <p className="text-xs font-semibold">{s.label}</p>
+                          <p className="text-[10px] opacity-60 mt-0.5">{s.desc}</p>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -656,7 +660,7 @@ export default function JobsPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-[var(--ats-text-muted)]">{t("jobs.rubricMustBe100")}</p>
                     <span
-                      className={`text-xs font-bold px-2.5 py-1 rounded-lg ${weightSum() === 100
+                      className={`text-xs font-bold tabular-nums px-2.5 py-1 rounded-lg ${weightSum() === 100
                           ? "bg-green-500/15 text-green-400"
                           : "bg-red-500/15 text-red-400"
                         }`}
@@ -694,16 +698,16 @@ export default function JobsPage() {
                           <span className={`text-xs font-semibold ${color}`}>{label}</span>
                           <span className="text-xs text-[var(--ats-text-muted)] ml-2">{desc}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1 bg-[var(--ats-surface)] border border-[var(--ats-border)] rounded-lg pl-2.5 pr-1 focus-within:border-indigo-500/60 transition-colors">
                           <input
                             type="number"
                             min={0}
                             max={100}
                             value={form[key]}
                             onChange={(e) => set(key, Number(e.target.value))}
-                            className="w-14 text-center px-2 py-1 bg-[var(--ats-surface)] border border-[var(--ats-border)] rounded-lg text-sm text-[var(--ats-text-h)] focus:outline-none focus:border-indigo-500/60"
+                            className="w-8 py-1 text-right bg-transparent text-sm tabular-nums text-[var(--ats-text-h)] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
-                          <span className="text-xs text-[var(--ats-text-muted)]">%</span>
+                          <span className="text-xs text-[var(--ats-text-muted)] pr-1.5">%</span>
                         </div>
                       </div>
                       <div className="h-1 bg-[var(--ats-border)] rounded-full overflow-hidden">

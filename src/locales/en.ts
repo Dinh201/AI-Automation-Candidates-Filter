@@ -271,6 +271,8 @@ export const en = {
     recordOutcomeLabel: "Record interview outcome:",
     hired: "Hired",
     rejected: "Rejected",
+    markCompleted: "Mark as Completed",
+    completing: "Updating...",
   },
   calendar: {
     title: "Interview Calendar",

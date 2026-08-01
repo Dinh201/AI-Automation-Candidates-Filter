@@ -20,6 +20,22 @@ const OFFICE_ADDRESS_VI = "Số 25, Đường 34, Phường An Khánh, TP. Hồ 
 const OFFICE_ADDRESS_EN = "No. 25, Street No. 34, An Khanh Ward, Ho Chi Minh City";
 const WEBSITE = "https://vacons.com.vn/";
 
+// Mail chỉ có HTML (không kèm bản text thuần) là một tín hiệu spam khá rõ với
+// Gmail — luôn kèm theo bản text để giảm khả năng bị đẩy vào mục Spam.
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<(br|\/p|\/div|\/tr|\/h[1-6])\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 async function sendGmail(mail: { from: string; to: string; subject: string; html: string }): Promise<void> {
   const accessToken = await getGmailAccessToken();
 
@@ -28,6 +44,7 @@ async function sendGmail(mail: { from: string; to: string; subject: string; html
     to: mail.to,
     subject: mail.subject,
     html: mail.html,
+    text: htmlToPlainText(mail.html),
   });
   const buffer = await composer.compile().build();
   const raw = buffer
@@ -335,6 +352,114 @@ export async function sendInterviewInvitation(data: InterviewEmailData) {
   return { partial: errors.length === 1, errors };
 }
 
+// Interviewer-only notification — used when the candidate-facing invite is
+// composed/sent separately (branch template picker + editable draft) instead
+// of being auto-sent together with scheduling.
+export async function sendInterviewerNotification(data: InterviewEmailData): Promise<void> {
+  if (!GMAIL_USER) throw new Error("GMAIL_USER chưa được cấu hình");
+  await sendGmail({
+    from: `${COMPANY} HR <${GMAIL_USER}>`,
+    to: data.interviewerEmail,
+    subject: `[${COMPANY}] Lịch phỏng vấn: ${data.candidateName} – ${data.jobTitle}`,
+    html: buildInterviewNotifyInterviewer(data),
+  });
+}
+
+// ─── Interview invite draft — branch-specific (editable before sending) ──────
+
+export interface InviteDraftData {
+  candidateName: string;
+  gender?: "male" | "female";
+  jobTitle: string;
+  startTime: Date;
+  endTime: Date;
+  meetLink?: string;
+}
+
+function buildHcmInviteDraft(data: InviteDraftData): OutcomeDraft {
+  const salut = escapeHtml(salutation(data.candidateName, data.gender));
+  const jobTitle = escapeHtml(data.jobTitle);
+  const startT = formatTime(data.startTime);
+  const endT = formatTime(data.endTime);
+  const timeRangeVN = `${startT} – ${endT}, ${formatInterviewDateVN(data.startTime)}`;
+  const timeRangeEN = `${startT} – ${endT}, ${formatInterviewDateEN(data.startTime)}`;
+
+  return {
+    subject: `[${COMPANY}] Thư mời phỏng vấn – ${data.jobTitle}`,
+    body: `<p>Dear ${salut},</p>
+<p>${COMPANY_VI} chân thành cảm ơn bạn đã quan tâm đến vị trí <strong>${jobTitle}</strong> mà chúng tôi đang tuyển dụng.</p>
+<p><em>${COMPANY_EN} sincerely thanks you for your interest in the ${jobTitle} position we are currently hiring for.</em></p>
+<p>Chúng tôi rất hân hạnh mời bạn đến tham dự buổi phỏng vấn trực tiếp với thông tin như sau:</p>
+<p><em>We are pleased to invite you to attend a face-to-face interview with the following details:</em></p>
+<p><strong>Thời gian / Time:</strong> ${timeRangeVN} (<em>${timeRangeEN}</em>)</p>
+<p><strong>Trụ sở / Address:</strong> ${OFFICE_ADDRESS_VI} (<em>${OFFICE_ADDRESS_EN}</em>)</p>
+<p>Chúng tôi rất mong nhận được sự xác nhận tham dự từ bạn qua email này. Trong trường hợp bạn cần thêm thông tin hoặc gặp khó khăn về mặt thời gian, đừng ngần ngại liên hệ với chúng tôi để được hỗ trợ nhanh chóng.</p>
+<p><em>Please kindly confirm your attendance by replying to this email. If you require any further information or need to reschedule, feel free to contact us.</em></p>
+<p>Chúng tôi rất mong được gặp bạn tại buổi phỏng vấn sắp tới!</p>
+<p><em>We look forward to meeting you at the upcoming interview!</em></p>
+<p>Thanks and Best Regards,<br>Ms. Nhi Nguyen<br>Talent Acquisition (HR)<br>${COMPANY_EN}</p>`,
+  };
+}
+
+function buildHanoiInviteDraft(data: InviteDraftData): OutcomeDraft {
+  const salut = escapeHtml(salutation(data.candidateName, data.gender));
+  const jobTitle = escapeHtml(data.jobTitle);
+  const meetLine = data.meetLink
+    ? `<p>The interview will be conducted online via Google Meet: ${escapeHtml(data.meetLink)}</p>
+<p>Buổi phỏng vấn sẽ được thực hiện trực tuyến qua Google Meet: ${escapeHtml(data.meetLink)}</p>
+`
+    : "";
+
+  return {
+    subject: `[${COMPANY}] Trao đổi cơ hội nghề nghiệp – ${data.jobTitle}`,
+    body: `<p>Dear ${salut},</p>
+<p>I'm Alice, representing the HR team at VACONS – a construction and architecture company.</p>
+<p>Tôi là Alice, đại diện bộ phận Nhân sự tại VACONS – công ty hoạt động trong lĩnh vực xây dựng và kiến trúc.</p>
+<p>I came across your profile on Vietnamwork and was particularly impressed by your experience in business development.</p>
+<p>Tôi có cơ hội xem qua hồ sơ của Chị trên Vietnamwork và đặc biệt ấn tượng với kinh nghiệm trong lĩnh vực phát triển kinh doanh.</p>
+<p>We are currently hiring for a ${jobTitle} position.</p>
+<p>Hiện tại, VACONS đang tuyển dụng vị trí ${jobTitle}.</p>
+<p>Given your background, we believe you could be a strong fit for this role and contribute to expanding our client network and business opportunities.</p>
+<p>Với nền tảng kinh nghiệm của Chị, chúng tôi tin rằng Chị có thể phù hợp với vị trí này và đóng góp vào việc mở rộng tệp khách hàng cũng như cơ hội kinh doanh của công ty.</p>
+<p>Please find the Job Description attached for your reference.</p>
+<p>Tôi có đính kèm mô tả công việc để Chị tham khảo thêm.</p>
+<p>We would appreciate the opportunity to connect with you for a brief and confidential discussion to further explore this opportunity.</p>
+<p>Chúng tôi rất mong có cơ hội trao đổi cùng Chị trong một buổi trò chuyện ngắn và riêng tư để chia sẻ thêm về cơ hội này.</p>
+<p>The interview schedule can be flexibly arranged based on your availability and will be coordinated via Zalo for your convenience.</p>
+<p>Thời gian phỏng vấn sẽ được sắp xếp linh hoạt theo lịch của Chị và trao đổi qua Zalo để thuận tiện hơn.</p>
+${meetLine}<p>Contact person: Ms. Nhi – 0845 325 262 (Zalo)</p>
+<p>Người liên hệ: Ms. Nhi – 0845 325 262 (Zalo)</p>
+<p>If you are interested, please feel free to connect with me via Zalo or share your availability for further arrangement.</p>
+<p>Nếu Chị quan tâm, vui lòng kết nối với tôi qua Zalo hoặc chia sẻ thời gian phù hợp để mình sắp xếp buổi trao đổi.</p>
+<p>All information shared will be treated with strict confidentiality.</p>
+<p>Mọi thông tin trao đổi sẽ được đảm bảo tính bảo mật tuyệt đối.</p>
+<p>I look forward to your response.</p>
+<p>Rất mong nhận được phản hồi từ Chị.</p>
+<p>Best regards<br>Marketing Department (HR)<br>VIET AN CONSTRUCTION ARCHITECTURE COMPANY LIMITED (VACONS)<br>Ms. Alice Nguyen</p>`,
+  };
+}
+
+export type InterviewBranch = "hcm" | "hanoi";
+
+export function buildInviteDraft(branch: InterviewBranch, data: InviteDraftData): OutcomeDraft {
+  return branch === "hanoi" ? buildHanoiInviteDraft(data) : buildHcmInviteDraft(data);
+}
+
+export async function sendCustomInviteEmail(data: {
+  candidateEmail: string;
+  subject: string;
+  body: string; // HTML from RichTextEditor
+}): Promise<void> {
+  if (!GMAIL_USER) throw new Error("GMAIL_USER chưa được cấu hình");
+  const styledBody = `<div style="color:#374151;font-size:15px;line-height:1.7">${data.body}</div>`;
+  await sendGmail({
+    from: `${COMPANY} Recruitment <${GMAIL_USER}>`,
+    to: data.candidateEmail,
+    subject: data.subject,
+    html: emailWrapper("#208994", styledBody, `Email từ phòng Nhân sự ${COMPANY}.`),
+  });
+}
+
 // ─── Hired Notification ───────────────────────────────────────────────────────
 
 function buildHiredHtml(data: OutcomeEmailData): string {
@@ -442,6 +567,76 @@ export async function sendRejectedNotification(data: OutcomeEmailData): Promise<
     to: data.candidateEmail,
     subject: `[${COMPANY}] Kết quả ứng tuyển – ${data.jobTitle}`,
     html: buildRejectedHtml(data),
+  });
+}
+
+// ─── Editable outcome draft (HR can tweak wording per candidate before sending) ─
+
+export interface OutcomeDraft {
+  subject: string;
+  body: string;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// HTML starting draft — edited directly in the UI (RichTextEditor: bold,
+// italic, alignment...) before sending, same editor used for job descriptions.
+// Dynamic values are escaped even though this is HR-only content, as defense
+// in depth against a candidate name/job title containing HTML.
+export function buildOutcomeDraft(outcome: "Hired" | "Rejected", data: OutcomeEmailData): OutcomeDraft {
+  const salut = escapeHtml(salutation(data.candidateName, data.gender));
+  const jobTitle = escapeHtml(data.jobTitle);
+  const pronoun = data.gender === "male" ? "Anh" : data.gender === "female" ? "Chị" : "Anh/Chị";
+
+  if (outcome === "Hired") {
+    return {
+      subject: `[${COMPANY}] Chúc mừng! Bạn đã được tuyển dụng – ${data.jobTitle}`,
+      body: `<p>Dear ${salut},</p>
+<p>${COMPANY_VI} trân trọng thông báo ${pronoun} đã <strong>trúng tuyển vị trí ${jobTitle}</strong> tại công ty.</p>
+<p><em>${COMPANY_EN} is pleased to inform you that you have been selected for the ${jobTitle} position.</em></p>
+<p>Chúng tôi đánh giá cao năng lực, kinh nghiệm cũng như sự phù hợp của ${pronoun} với văn hóa VACONS, và tin rằng ${pronoun} sẽ đóng góp tích cực vào sự phát triển của đội ngũ.</p>
+<p><em>We highly appreciate your qualifications and believe you will be a valuable addition to our team.</em></p>
+<p>Thông tin nhận việc cụ thể sẽ được trao đổi chi tiết qua điện thoại/Zalo trong thời gian sớm nhất.</p>
+<p><em>Further details regarding your onboarding will be discussed with you via phone/Zalo shortly.</em></p>
+<p>Rất mong được chào đón ${pronoun} gia nhập VACONS.</p>
+<p><em>We look forward to welcoming you to VACONS.</em></p>
+<p>Thanks and Best Regards,<br>Ms. Nhi Nguyen<br>Talent Acquisition (HR)<br>${COMPANY_EN}</p>`,
+    };
+  }
+
+  return {
+    subject: `[${COMPANY}] Kết quả ứng tuyển – ${data.jobTitle}`,
+    body: `<p>Dear ${escapeHtml(data.candidateName)},</p>
+<p>${COMPANY_VI} chân thành cảm ơn bạn đã tham gia phỏng vấn cho vị trí ${jobTitle} tại công ty.</p>
+<p><em>${COMPANY_EN} sincerely thanks you for attending the interview for the ${jobTitle} position.</em></p>
+<p>Sau khi đánh giá kỹ hồ sơ, chúng tôi rất tiếc thông báo rằng <strong>${COMPANY} chưa thể tiếp tục với đơn ứng tuyển của bạn ở thời điểm này</strong>. Quyết định này dựa trên định hướng và nhu cầu hiện tại của vị trí, không phản ánh toàn diện giá trị và kinh nghiệm mà bạn mang lại.</p>
+<p><em>After careful evaluation, we regret to inform you that ${COMPANY} will not be proceeding with your application at this time. This decision reflects the current direction and needs of the position and is not a full assessment of your experience or professional strengths.</em></p>
+<p>Chúng tôi cảm ơn sự quan tâm của bạn tới ${COMPANY} và chúc bạn nhiều thành công trong tương lai.</p>
+<p><em>We appreciate your interest in ${COMPANY} and wish you every success in the future.</em></p>
+<p>Kind regards,<br>Ms. Nhi Nguyen<br>Talent Acquisition (HR)<br>${COMPANY_EN}</p>`,
+  };
+}
+
+export async function sendCustomOutcomeEmail(data: {
+  outcome: "Hired" | "Rejected";
+  candidateEmail: string;
+  subject: string;
+  body: string; // HTML from RichTextEditor (bold/italic/alignment already applied)
+}): Promise<void> {
+  if (!GMAIL_USER) throw new Error("GMAIL_USER chưa được cấu hình");
+  const styledBody = `<div style="color:#374151;font-size:15px;line-height:1.7">${data.body}</div>`;
+  await sendGmail({
+    from: `${COMPANY} HR <${GMAIL_USER}>`,
+    to: data.candidateEmail,
+    subject: data.subject,
+    html: emailWrapper("#208994", styledBody, `Email thông báo kết quả tuyển dụng từ ${COMPANY}.`),
   });
 }
 

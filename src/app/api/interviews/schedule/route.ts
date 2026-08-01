@@ -6,7 +6,7 @@ import {
   refreshAccessToken,
   GoogleTokens,
 } from "@/services/google-calendar-service";
-import { sendInterviewInvitation, sendInterviewHRNotification } from "@/services/email-service";
+import { sendInterviewerNotification, sendInterviewHRNotification } from "@/services/email-service";
 import { sendPushToAll } from "@/lib/push-service";
 import { logAudit } from "@/services/audit-service";
 import { isMissingCandidateEmail } from "@/lib/candidate-email";
@@ -233,9 +233,12 @@ export async function POST(request: Request) {
     },
   });
 
-  let emailSent = false;
+  // Mail mời ỨNG VIÊN không tự gửi ở đây nữa — HR chọn chi nhánh (HCMC/Hà Nội)
+  // và chỉnh nội dung trực tiếp trong popup "Soạn mail mời" ở bước kế tiếp
+  // (xem InviteInterviewModal + /api/interviews/[id]/invite-draft + send-invite).
+  // Chỉ gửi thông báo nội bộ cho interviewer ở đây.
   try {
-    await sendInterviewInvitation({
+    await sendInterviewerNotification({
       candidateEmail: candidate.email,
       candidateName: candidate.name,
       interviewerEmail: interviewer_email,
@@ -246,9 +249,8 @@ export async function POST(request: Request) {
       meetLink: meetLink ?? undefined,
       notes,
     });
-    emailSent = true;
   } catch (err) {
-    console.error("Email send error (non-fatal):", err);
+    console.error("Interviewer email send error (non-fatal):", err);
   }
 
   // Gửi thông báo cho HR dựa theo notification_prefs (fire-and-forget)
@@ -310,6 +312,5 @@ export async function POST(request: Request) {
     calendar_connected: calendarConnected,
     calendar_error: calendarError,
     meet_link: meetLink,
-    email_sent: emailSent,
   });
 }

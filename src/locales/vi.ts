@@ -271,6 +271,8 @@ export const vi = {
     recordOutcomeLabel: "Ghi kết quả phỏng vấn:",
     hired: "Đã tuyển",
     rejected: "Từ chối",
+    markCompleted: "Hoàn thành phỏng vấn",
+    completing: "Đang cập nhật...",
   },
   calendar: {
     title: "Lịch phỏng vấn",

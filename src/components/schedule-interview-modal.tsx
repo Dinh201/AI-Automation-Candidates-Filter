@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import { isMissingCandidateEmail, isValidEmailFormat } from "@/lib/candidate-email";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 interface Props {
   candidateId: string;
@@ -25,15 +26,17 @@ interface Props {
 }
 
 type Slot = { start_time: string; end_time: string };
+type DaySlots = { date: string; slots: Slot[] };
 
 type ScheduleResult = {
   meet_link?: string;
-  email_sent?: boolean;
   calendar_connected?: boolean;
   calendar_error?: string;
 };
 
-type Step = "form" | "slots" | "success";
+type Branch = "hcm" | "hanoi";
+
+type Step = "form" | "slots" | "compose" | "success";
 
 export function ScheduleInterviewModal({
   candidateId,
@@ -56,9 +59,11 @@ export function ScheduleInterviewModal({
     duration: "45",
     notes: "",
   });
+  const [branch, setBranch] = useState<Branch>("hcm");
 
   const [findingSlots, setFindingSlots] = useState(false);
-  const [slots, setSlots] = useState<Slot[]>([]);
+  const [days, setDays] = useState<DaySlots[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [scheduling, setScheduling] = useState(false);
 
@@ -67,20 +72,49 @@ export function ScheduleInterviewModal({
   const [conflict, setConflict] = useState("");
   const [slotsError, setSlotsError] = useState("");
 
+  // ── Step "compose": draft + send the candidate-facing invite email ──
+  const [interviewId, setInterviewId] = useState<string | null>(null);
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const [loadingDraft, setLoadingDraft] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+  const [composeError, setComposeError] = useState("");
+
   function onChange(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
   useEffect(() => {
     const supabase = createSupabaseBrowser();
+
+    // getSession() đọc từ local storage — gần như tức thì, không chờ round-trip mạng.
+    // Điền tạm ngay để tránh race condition khi HR thao tác nhanh trước khi getUser() xong.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return;
+      const email = session.user.email ?? "";
+      const name = session.user.email?.split("@")[0] || "HR";
+      setForm((f) => ({
+        ...f,
+        interviewer_name: f.interviewer_name || name,
+        interviewer_email: f.interviewer_email || email,
+      }));
+    });
+
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const { data } = await supabase
-        .from("user_profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-      const name = data?.full_name || user.email?.split("@")[0] || "HR";
+      let fullName: string | null = null;
+      try {
+        const { data } = await supabase
+          .from("user_profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+        fullName = data?.full_name ?? null;
+      } catch {
+        // Bỏ qua — vẫn fallback về email bên dưới để không để trống interviewer_name/email
+      }
+      const name = fullName || user.email?.split("@")[0] || "HR";
       setForm((f) => ({ ...f, interviewer_name: name, interviewer_email: user.email ?? "" }));
     });
   }, []);
@@ -88,6 +122,13 @@ export function ScheduleInterviewModal({
   async function handleFindSlots(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setSlotsError("");
+
+    if (!form.interviewer_name || !form.interviewer_email) {
+      setSlotsError(
+        "Chưa xác định được thông tin người phỏng vấn (tài khoản đăng nhập). Vui lòng tải lại trang và thử lại."
+      );
+      return;
+    }
 
     if (needsEmail) {
       if (!isValidEmailFormat(emailInput)) {
@@ -130,15 +171,20 @@ export function ScheduleInterviewModal({
         return;
       }
 
-      if (!data.slots || data.slots.length === 0) {
+      const fetchedDays: DaySlots[] = data.days ?? [];
+      const totalSlots = fetchedDays.reduce((sum, d) => sum + d.slots.length, 0);
+
+      if (fetchedDays.length === 0 || totalSlots === 0) {
         setSlotsError(
-          "Không tìm được khung giờ trống trong 14 ngày tới. Vui lòng thử lại sau."
+          "Không tìm được khung giờ trống trong 3 tuần tới. Vui lòng thử lại sau."
         );
         return;
       }
 
-      setSlots(data.slots);
-      setSelectedSlot(data.slots[0]);
+      const firstDayWithSlots = fetchedDays.find((d) => d.slots.length > 0) ?? fetchedDays[0];
+      setDays(fetchedDays);
+      setSelectedDate(firstDayWithSlots.date);
+      setSelectedSlot(firstDayWithSlots.slots[0] ?? null);
       setStep("slots");
     } catch (err) {
       setSlotsError(err instanceof Error ? err.message : "Có lỗi xảy ra khi tìm khung giờ");
@@ -173,7 +219,13 @@ export function ScheduleInterviewModal({
 
       if (!res.ok) {
         if (data.code === "SLOT_NOT_AVAILABLE") {
-          setSlots((prev) => prev.filter((s) => s.start_time !== selectedSlot.start_time));
+          setDays((prev) =>
+            prev.map((d) =>
+              d.date === selectedDate
+                ? { ...d, slots: d.slots.filter((s) => s.start_time !== selectedSlot.start_time) }
+                : d
+            )
+          );
           setSelectedSlot(null);
           setConflict(
             data.error ?? "Khung giờ vừa bị đặt bởi người khác. Vui lòng chọn khung giờ khác."
@@ -185,7 +237,9 @@ export function ScheduleInterviewModal({
       }
 
       setResult(data);
-      setStep("success");
+      setInterviewId(data.interview.id);
+      setStep("compose");
+      void loadDraft(data.interview.id, branch);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Có lỗi xảy ra");
     } finally {
@@ -193,17 +247,72 @@ export function ScheduleInterviewModal({
     }
   }
 
+  async function loadDraft(id: string, b: Branch) {
+    setLoadingDraft(true);
+    setComposeError("");
+    try {
+      const res = await fetch(`/api/interviews/${id}/invite-draft?branch=${b}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setComposeError(data.error ?? "Không tạo được nội dung mail mẫu.");
+        return;
+      }
+      setComposeSubject(data.subject);
+      setComposeBody(data.body);
+    } catch (err) {
+      setComposeError(err instanceof Error ? err.message : "Có lỗi xảy ra khi tạo nội dung mail");
+    } finally {
+      setLoadingDraft(false);
+    }
+  }
+
+  function switchBranch(b: Branch) {
+    setBranch(b);
+    if (interviewId) void loadDraft(interviewId, b);
+  }
+
+  async function handleSendInvite() {
+    if (!interviewId) return;
+    setSendingInvite(true);
+    setComposeError("");
+    try {
+      const res = await fetch(`/api/interviews/${interviewId}/send-invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: composeSubject, body: composeBody }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setComposeError(data.error ?? "Không gửi được mail. Vui lòng thử lại.");
+        return;
+      }
+      setInviteSent(true);
+      setStep("success");
+    } catch (err) {
+      setComposeError(err instanceof Error ? err.message : "Có lỗi xảy ra khi gửi mail");
+    } finally {
+      setSendingInvite(false);
+    }
+  }
+
   function closeReset() {
     setOpen(false);
     setStep("form");
-    setSlots([]);
+    setDays([]);
+    setSelectedDate(null);
     setSelectedSlot(null);
     setResult(null);
     setError("");
     setConflict("");
     setSlotsError("");
     setForm({ interviewer_name: "", interviewer_email: "", duration: "45", notes: "" });
+    setBranch("hcm");
     setEmailInput(candidateEmail);
+    setInterviewId(null);
+    setComposeSubject("");
+    setComposeBody("");
+    setInviteSent(false);
+    setComposeError("");
   }
 
   function formatSlot(slot: Slot) {
@@ -232,6 +341,42 @@ export function ScheduleInterviewModal({
     return { dayName, date, time: `${startTime} – ${endTime}` };
   }
 
+  // "YYYY-MM-DD" → short tab label, e.g. { weekday: "Th 3", dayMonth: "13/08" }
+  function formatDayTab(dateStr: string) {
+    const d = new Date(`${dateStr}T12:00:00`);
+    const tz = "Asia/Ho_Chi_Minh";
+    const weekday = d.toLocaleDateString("vi-VN", { weekday: "short", timeZone: tz });
+    const dayMonth = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", timeZone: tz });
+    return { weekday, dayMonth };
+  }
+
+  function formatTime(iso: string) {
+    return new Date(iso).toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+  }
+
+  // Zero-padded "HH:mm" in the configured timezone — used as the grid row key
+  // so the same time-of-day lines up across every day column.
+  function timeKey(iso: string) {
+    return new Date(iso).toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Ho_Chi_Minh",
+      hourCycle: "h23",
+    });
+  }
+
+  const timeRows = Array.from(
+    new Set(days.flatMap((d) => d.slots.map((s) => timeKey(s.start_time))))
+  ).sort();
+
+  function slotAt(date: string, time: string): Slot | undefined {
+    return days.find((d) => d.date === date)?.slots.find((s) => timeKey(s.start_time) === time);
+  }
+
   const calendarHref = `/api/calendar/connect${
     returnPath ? `?return_to=${encodeURIComponent(returnPath)}` : ""
   }`;
@@ -254,7 +399,7 @@ export function ScheduleInterviewModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeReset} />
 
-          <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden">
+          <div className={`relative w-full ${step === "slots" ? "max-w-3xl" : "max-w-lg"} bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden`}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
               <div className="flex items-center gap-2">
@@ -270,6 +415,7 @@ export function ScheduleInterviewModal({
                   <h2 className="text-base font-semibold text-white">
                     {step === "form" && "Lên lịch phỏng vấn"}
                     {step === "slots" && "Chọn khung giờ phỏng vấn"}
+                    {step === "compose" && "Soạn mail mời ứng viên"}
                     {step === "success" && "Đặt lịch thành công"}
                   </h2>
                   <p className="text-xs text-zinc-400 mt-0.5">
@@ -339,6 +485,39 @@ export function ScheduleInterviewModal({
                 </div>
 
                 <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-zinc-400">Chi nhánh phỏng vấn</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBranch("hcm")}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        branch === "hcm"
+                          ? "bg-indigo-600/20 border-indigo-600/50 text-indigo-300"
+                          : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      Hồ Chí Minh
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBranch("hanoi")}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        branch === "hanoi"
+                          ? "bg-indigo-600/20 border-indigo-600/50 text-indigo-300"
+                          : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      Hà Nội
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-600">
+                    {branch === "hcm"
+                      ? "Mail mời phỏng vấn trực tiếp tại văn phòng."
+                      : "Mail trao đổi cơ hội qua Zalo, phỏng vấn online qua Google Meet."}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
                   <label className="text-xs font-medium text-zinc-400">
                     Ghi chú cho interviewer (tùy chọn)
                   </label>
@@ -396,64 +575,80 @@ export function ScheduleInterviewModal({
 
             {/* ── Step 2: Slot selection ── */}
             {step === "slots" && (
-              <div className="px-6 py-5 space-y-4">
+              <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
                 <p className="text-xs text-zinc-500">
                   {calendarConnected
-                    ? "Các khung giờ dưới đây đã được kiểm tra với Google Calendar và lịch nội bộ."
-                    : "Các khung giờ dưới đây đã được kiểm tra với lịch nội bộ."}
+                    ? "Các khung giờ dưới đây đã được kiểm tra với Google Calendar và lịch nội bộ. Bấm trực tiếp vào ô giờ trống bạn muốn chọn."
+                    : "Các khung giờ dưới đây đã được kiểm tra với lịch nội bộ. Bấm trực tiếp vào ô giờ trống bạn muốn chọn."}
                 </p>
 
-                <div className="space-y-2">
-                  {slots.map((slot, i) => {
-                    const fmt = formatSlot(slot);
-                    const isSelected = selectedSlot?.start_time === slot.start_time;
-                    return (
-                      <button
-                        key={slot.start_time}
-                        type="button"
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`w-full flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${
-                          isSelected
-                            ? "bg-indigo-600/15 border-indigo-600/50"
-                            : "bg-zinc-800/50 border-zinc-700 hover:border-zinc-600"
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
-                            isSelected ? "border-indigo-400" : "border-zinc-600"
-                          }`}
-                        >
-                          {isSelected && (
-                            <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-semibold capitalize ${isSelected ? "text-white" : "text-zinc-200"}`}>
-                            {fmt.dayName}, {fmt.date}
-                          </p>
-                          <p className={`text-xs mt-0.5 ${isSelected ? "text-indigo-300" : "text-zinc-500"}`}>
-                            {fmt.time} · {form.duration} phút
-                          </p>
-                        </div>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-md shrink-0 ${
-                            i === 0
-                              ? "bg-green-500/15 text-green-400"
-                              : "bg-zinc-700/50 text-zinc-400"
-                          }`}
-                        >
-                          {i === 0 ? "Sớm nhất" : `Phương án ${i + 1}`}
-                        </span>
-                      </button>
-                    );
-                  })}
-
-                  {slots.length === 0 && (
-                    <div className="text-center py-6 text-sm text-zinc-500">
-                      Tất cả khung giờ đã bị đặt. Vui lòng quay lại và thử lại.
-                    </div>
-                  )}
+                {/* Weekly grid — days as columns, time-of-day as rows */}
+                <div className="overflow-x-auto -mx-1 px-1">
+                  <table className="border-separate border-spacing-1 text-xs mx-auto">
+                    <thead>
+                      <tr>
+                        <th className="w-12" />
+                        {days.map((d) => {
+                          const tab = formatDayTab(d.date);
+                          const hasSlots = d.slots.length > 0;
+                          return (
+                            <th key={d.date} className="min-w-[68px] px-1 py-1 font-medium">
+                              <div className={`capitalize ${hasSlots ? "text-zinc-300" : "text-zinc-600"}`}>{tab.weekday}</div>
+                              <div className={hasSlots ? "text-zinc-500" : "text-zinc-700"}>{tab.dayMonth}</div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timeRows.map((time) => (
+                        <tr key={time}>
+                          <td className="text-right pr-1.5 text-zinc-500 whitespace-nowrap align-middle">{time}</td>
+                          {days.map((d) => {
+                            const slot = slotAt(d.date, time);
+                            const isSelected = !!slot && selectedSlot?.start_time === slot.start_time;
+                            return (
+                              <td key={d.date} className="p-0 align-middle">
+                                {slot ? (
+                                  <button
+                                    type="button"
+                                    title={formatTime(slot.start_time)}
+                                    onClick={() => {
+                                      setSelectedDate(d.date);
+                                      setSelectedSlot(slot);
+                                    }}
+                                    className={`w-full h-7 rounded-md border transition-colors ${
+                                      isSelected
+                                        ? "bg-indigo-600 border-indigo-500"
+                                        : "bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/30"
+                                    }`}
+                                  />
+                                ) : (
+                                  <div className="w-full h-7 rounded-md bg-zinc-800/30" />
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+
+                <div className="flex items-center gap-4 text-[11px] text-zinc-500">
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500/15 border border-emerald-500/30 inline-block" /> Còn trống</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-600 inline-block" /> Đang chọn</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-zinc-800/30 inline-block" /> Đã bận</span>
+                </div>
+
+                {selectedSlot && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-indigo-600/10 border border-indigo-600/25 text-xs text-indigo-300">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span className="capitalize">
+                      Đã chọn: <span className="font-semibold text-white">{formatSlot(selectedSlot).dayName}, {formatSlot(selectedSlot).date} · {formatSlot(selectedSlot).time}</span>
+                    </span>
+                  </div>
+                )}
 
                 {conflict && (
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
@@ -483,7 +678,7 @@ export function ScheduleInterviewModal({
                   <button
                     type="button"
                     onClick={handleSchedule}
-                    disabled={scheduling || !selectedSlot || slots.length === 0}
+                    disabled={scheduling || !selectedSlot}
                     className="flex-1 py-2.5 rounded-lg border disabled:opacity-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 hover:opacity-80"
                     style={{
                       background: "var(--pipe-ai-bg)",
@@ -497,6 +692,102 @@ export function ScheduleInterviewModal({
                       </>
                     ) : (
                       "Xác nhận đặt lịch"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Step 3: Compose & send the candidate-facing invite ── */}
+            {step === "compose" && (
+              <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  Đã tạo lịch phỏng vấn thành công. Chọn mẫu mail và chỉnh sửa trước khi gửi cho ứng viên.
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => switchBranch("hcm")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      branch === "hcm"
+                        ? "bg-indigo-600/20 border-indigo-600/50 text-indigo-300"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    Hồ Chí Minh
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchBranch("hanoi")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      branch === "hanoi"
+                        ? "bg-indigo-600/20 border-indigo-600/50 text-indigo-300"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    Hà Nội
+                  </button>
+                </div>
+
+                {loadingDraft && (
+                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-zinc-500">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Đang tạo nội dung mail mẫu...
+                  </div>
+                )}
+
+                {!loadingDraft && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-400">Tiêu đề</label>
+                      <input
+                        value={composeSubject}
+                        onChange={(e) => setComposeSubject(e.target.value)}
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-400">Nội dung</label>
+                      <div className="dark">
+                        <RichTextEditor key={branch} value={composeBody} onChange={setComposeBody} minHeight="260px" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {composeError && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {composeError}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setStep("success")}
+                    className="flex-1 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors"
+                  >
+                    Bỏ qua, không gửi mail
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendInvite}
+                    disabled={loadingDraft || sendingInvite || !composeSubject || !composeBody}
+                    className="flex-1 py-2.5 rounded-lg border disabled:opacity-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 hover:opacity-80"
+                    style={{
+                      background: "var(--pipe-ai-bg)",
+                      borderColor: "var(--pipe-ai-border)",
+                      color: "var(--pipe-ai-text)",
+                    }}
+                  >
+                    {sendingInvite ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Đang gửi...
+                      </>
+                    ) : (
+                      "Gửi mail mời"
                     )}
                   </button>
                 </div>
@@ -546,10 +837,15 @@ export function ScheduleInterviewModal({
                     </div>
                   ) : null}
 
-                  {result.email_sent && (
+                  {inviteSent ? (
                     <div className="flex items-center gap-2 text-sm text-green-400">
                       <CheckCircle2 className="w-4 h-4 shrink-0" />
-                      Email mời đã gửi cho ứng viên &amp; interviewer
+                      Email mời đã gửi cho ứng viên
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-zinc-500">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      Chưa gửi mail mời cho ứng viên (đã bỏ qua)
                     </div>
                   )}
 

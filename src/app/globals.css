@@ -313,6 +313,25 @@
   }
 }
 
+/* ── Global "pressed" feedback for every clickable control ──
+   Intentionally unlayered: Tailwind utility classes (e.g. the shared
+   Button component's `active:translate-y-px`) live in the "utilities"
+   layer, which always wins over anything in `@layer base` regardless of
+   selector specificity. Keeping this rule unlayered makes it win over
+   ALL layered styles instead, so the press effect is consistent everywhere
+   — not just plain unstyled <button> elements.
+   Covers <button> and <a href> (Next.js <Link> renders as <a>) — Dashboard's
+   stat/action cards are Links, not buttons, but are still clickable
+   controls that should feel "pressed". */
+button:not(:disabled),
+a[href] {
+  transition: transform 0.1s ease-out;
+}
+button:not(:disabled):active,
+a[href]:active {
+  transform: scale(0.96) !important;
+}
+
 @layer utilities {
   /* ── Core surface utilities ── */
   .glass {

@@ -9,6 +9,7 @@ import {
 import {
   sendHiredNotification,
   sendRejectedNotification,
+  sendCustomOutcomeEmail,
 } from "@/services/email-service";
 
 type Params = { params: Promise<{ id: string }> };
@@ -51,6 +52,8 @@ export async function PATCH(request: Request, { params }: Params) {
   let body: {
     status?: "Completed" | "Cancelled" | "Rescheduled";
     outcome?: "Hired" | "Rejected";
+    email_subject?: string;
+    email_body?: string;
   };
 
   try {
@@ -59,7 +62,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid JSON", code: "VALIDATION_ERROR" }, { status: 400 });
   }
 
-  const { status, outcome } = body;
+  const { status, outcome, email_subject, email_body } = body;
 
   if (!status && !outcome) {
     return NextResponse.json(
@@ -115,22 +118,33 @@ export async function PATCH(request: Request, { params }: Params) {
       return NextResponse.json({ error: error.message, code: "DATABASE_ERROR" }, { status: 500 });
     }
 
-    // Gửi email kết quả cho ứng viên
+    // Gửi email kết quả cho ứng viên — ưu tiên nội dung HR đã chỉnh trực tiếp
+    // (email_subject/email_body, từ popup "Kết quả / Gửi mail"); nếu không có
+    // thì rơi về template cố định như trước (giữ tương thích ngược).
     if (candidate?.email) {
-      const emailData = {
-        candidateName: candidate.name,
-        candidateEmail: candidate.email,
-        jobTitle: candidate.jobs?.title ?? "Vị trí tuyển dụng",
-        interviewerName: interview.interviewer_name ?? undefined,
-        hrEmail: process.env.HR_EMAIL,
-      };
       try {
-        if (outcome === "Hired") {
-          await sendHiredNotification(emailData);
-          console.log("[email] Đã gửi mail chúc mừng tuyển dụng:", candidate.email);
+        if (email_subject && email_body) {
+          await sendCustomOutcomeEmail({
+            outcome,
+            candidateEmail: candidate.email,
+            subject: email_subject,
+            body: email_body,
+          });
+          console.log("[email] Đã gửi mail kết quả (nội dung tùy chỉnh):", candidate.email);
         } else {
-          await sendRejectedNotification(emailData);
-          console.log("[email] Đã gửi mail thông báo từ chối:", candidate.email);
+          const emailData = {
+            candidateName: candidate.name,
+            candidateEmail: candidate.email,
+            jobTitle: candidate.jobs?.title ?? "Vị trí tuyển dụng",
+            interviewerName: interview.interviewer_name ?? undefined,
+            hrEmail: process.env.HR_EMAIL,
+          };
+          if (outcome === "Hired") {
+            await sendHiredNotification(emailData);
+          } else {
+            await sendRejectedNotification(emailData);
+          }
+          console.log("[email] Đã gửi mail kết quả (template mặc định):", candidate.email);
         }
       } catch (err) {
         console.error("[email] Lỗi gửi mail kết quả (non-fatal):", err);

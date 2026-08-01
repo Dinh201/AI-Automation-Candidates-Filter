@@ -9,8 +9,8 @@ import {
 import { calendarSettingsFromRow, tzOffset } from "@/lib/calendar-settings";
 
 const SLOT_STEP_MIN = 30;
-const SCAN_DAYS = 14;
-const MAX_SLOTS = 3;
+const SCAN_DAYS = 21; // calendar-day ceiling — guarantees MIN_WORK_DAYS working days even with weekends in between
+const MIN_WORK_DAYS = 7; // suggest a full week of working days, not just a handful of slots
 
 async function getCalendarSettings() {
   const { data } = await supabaseAdmin
@@ -140,6 +140,10 @@ export async function POST(request: Request) {
       ]
     : [{ start: workStartMin, end: workEndMin }];
 
+  // Thứ 7 chỉ phỏng vấn từ 10:00–12:30 — không theo giờ làm việc/nghỉ trưa
+  // chung đã cấu hình ở Cài đặt.
+  const SATURDAY_WINDOWS = [{ start: timeToMinutes("10:00"), end: timeToMinutes("12:30") }];
+
   // Scan window: tomorrow → +SCAN_DAYS
   const fromStr = addDays(dateStrInTz(new Date(), settings.timezone), 1, settings.timezone, offset);
   const toStr = addDays(fromStr, SCAN_DAYS, settings.timezone, offset);
@@ -176,37 +180,41 @@ export async function POST(request: Request) {
   ];
 
   // 3. Find available slots — chỉ trong ngày/giờ làm việc đã cấu hình, trừ giờ
-  // nghỉ trưa, và né các khoảng bận theo buffer đã cấu hình.
-  const available: { start_time: string; end_time: string }[] = [];
+  // nghỉ trưa, và né các khoảng bận theo buffer đã cấu hình. Gom theo từng
+  // ngày làm việc (ít nhất MIN_WORK_DAYS ngày) thay vì chỉ lấy vài slot đầu
+  // tiên tìm thấy, để HR/ứng viên chủ động chọn ngày + giờ trong cả tuần.
+  const days: { date: string; slots: { start_time: string; end_time: string }[] }[] = [];
 
-  for (let dayOffset = 0; dayOffset < SCAN_DAYS && available.length < MAX_SLOTS; dayOffset++) {
+  for (let dayOffset = 0; dayOffset < SCAN_DAYS && days.length < MIN_WORK_DAYS; dayOffset++) {
     const dateStr = addDays(fromStr, dayOffset, settings.timezone, offset);
-    if (!workDaySet.has(weekday(dateStr, offset))) continue;
+    const dateWeekday = weekday(dateStr, offset);
+    if (!workDaySet.has(dateWeekday)) continue;
 
-    for (const window of dayWindows) {
+    const windowsForDay = dateWeekday === 6 ? SATURDAY_WINDOWS : dayWindows;
+    const daySlots: { start_time: string; end_time: string }[] = [];
+
+    for (const window of windowsForDay) {
       const windowMaxStart = window.end - duration;
       if (windowMaxStart < window.start) continue; // duration too long for this window
 
-      for (
-        let startMin = window.start;
-        startMin <= windowMaxStart && available.length < MAX_SLOTS;
-        startMin += SLOT_STEP_MIN
-      ) {
+      for (let startMin = window.start; startMin <= windowMaxStart; startMin += SLOT_STEP_MIN) {
         const slotStart = makeSlot(dateStr, startMin, offset);
         const slotEnd = makeSlot(dateStr, startMin + duration, offset);
 
         if (overlapsAny(slotStart, slotEnd, allBusy, bufferMs)) continue;
 
-        available.push({
+        daySlots.push({
           start_time: slotStart.toISOString(),
           end_time: slotEnd.toISOString(),
         });
       }
     }
+
+    days.push({ date: dateStr, slots: daySlots });
   }
 
   return NextResponse.json({
-    slots: available,
+    days,
     calendar_connected: !!tokens,
     duration_minutes: duration,
   });
