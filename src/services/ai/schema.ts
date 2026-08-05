@@ -25,3 +25,24 @@ export const candidateScoringSchema = z.object({
 });
 
 export type CandidateScoringResult = z.infer<typeof candidateScoringSchema>;
+
+// Bản dịch tiếng Việt của các field text tự do trong CandidateScoringResult —
+// chỉ dịch nội dung do AI viết ra, KHÔNG đụng tới điểm số/enum (total_score,
+// final_decision, confidence_level...) vì đó không phải nội dung cần dịch.
+export const candidateScoringTranslationSchema = z.object({
+  candidate_summary: z.string(),
+  evaluation_reason: z.string(),
+  hiring_risks: z.array(z.string()),
+  strengths: z.array(z.string()),
+  weaknesses: z.array(z.string()),
+  missing_information: z.array(z.string()),
+  recommended_interview_questions: z.array(z.string()),
+  evidence: z.object({
+    skills_evidence: z.array(z.string()),
+    experience_evidence: z.array(z.string()),
+    culture_evidence: z.array(z.string()),
+    potential_evidence: z.array(z.string())
+  })
+});
+
+export type CandidateScoringTranslation = z.infer<typeof candidateScoringTranslationSchema>;

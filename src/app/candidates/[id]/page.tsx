@@ -17,6 +17,7 @@ import {
 import { CandidateScoringResult } from "@/services/ai/schema";
 import { ScheduleInterviewModal } from "@/components/schedule-interview-modal";
 import { AskAIPanel } from "@/components/ask-ai-panel";
+import { TranslateScoreBox } from "@/components/translate-score-box";
 import { CandidateActionButtons } from "@/components/candidate-action-buttons";
 import { ViewCvLink } from "@/components/view-cv-link";
 
@@ -298,6 +299,11 @@ export default async function CandidateDetailPage({ params }: { params: Promise<
                 </ol>
               )}
             </SectionCard>
+          </div>
+
+          {/* Bản dịch tiếng Việt — full width */}
+          <div className="lg:col-span-2">
+            <TranslateScoreBox candidateId={id} />
           </div>
 
           {/* Ask AI — full width */}

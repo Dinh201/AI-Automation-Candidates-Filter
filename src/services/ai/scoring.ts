@@ -1,6 +1,6 @@
 import { OpenAI } from "openai";
-import { candidateScoringSchema, CandidateScoringResult } from "./schema";
-import { SCORING_SYSTEM_PROMPT, buildUserPrompt } from "./prompts";
+import { candidateScoringSchema, CandidateScoringResult, candidateScoringTranslationSchema, CandidateScoringTranslation } from "./schema";
+import { SCORING_SYSTEM_PROMPT, buildUserPrompt, TRANSLATE_SYSTEM_PROMPT, buildTranslatePrompt } from "./prompts";
 
 // Khởi tạo client. Trong thực tế sẽ lấy từ môi trường process.env.OPENAI_API_KEY
 const openai = new OpenAI({
@@ -100,4 +100,74 @@ export async function scoreCandidate(
   }
   
   throw new Error("Lỗi không xác định trong luồng retry.");
+}
+
+/**
+ * Dịch các field text tự do trong kết quả chấm điểm AI sang tiếng Việt.
+ * Dùng cho box "Xem bản dịch tiếng Việt" ở trang chi tiết ứng viên khi CV
+ * gốc là tiếng Anh nên kết quả chấm điểm cũng ra tiếng Anh.
+ */
+export async function translateScoringResult(
+  input: {
+    candidate_summary: string;
+    evaluation_reason: string;
+    hiring_risks: string[];
+    strengths: string[];
+    weaknesses: string[];
+    missing_information: string[];
+    recommended_interview_questions: string[];
+    evidence: {
+      skills_evidence: string[];
+      experience_evidence: string[];
+      culture_evidence: string[];
+      potential_evidence: string[];
+    };
+  },
+  maxRetries = 3
+): Promise<CandidateScoringTranslation> {
+  const userPrompt = buildTranslatePrompt(input);
+
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: TRANSLATE_SYSTEM_PROMPT },
+          { role: "user", content: userPrompt }
+        ],
+      });
+
+      const content = response.choices[0].message.content;
+      if (!content) {
+        throw new Error("OpenAI trả về nội dung rỗng.");
+      }
+
+      const parsedJson = JSON.parse(content);
+      const validationResult = candidateScoringTranslationSchema.safeParse(parsedJson);
+
+      if (!validationResult.success) {
+        console.error("Zod Validation Error (translate):", validationResult.error.format());
+        throw new Error("Dữ liệu JSON dịch không khớp với Schema yêu cầu.");
+      }
+
+      return validationResult.data;
+
+    } catch (error: unknown) {
+      attempt++;
+      console.warn(`Translate attempt ${attempt} failed: ${(error as Error).message}`);
+
+      if (attempt >= maxRetries) {
+        throw new Error(`Đã thử ${maxRetries} lần nhưng vẫn lỗi khi dịch kết quả chấm điểm. Lỗi cuối: ${(error as Error).message}`);
+      }
+
+      const waitTime = Math.pow(2, attempt - 1) * 1000;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+
+  throw new Error("Lỗi không xác định trong luồng retry dịch.");
 }

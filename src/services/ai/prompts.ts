@@ -43,6 +43,35 @@ export const SCORING_USER_TEMPLATE = `Hãy chấm điểm ứng viên sau đây 
 Thực hiện đánh giá và xuất JSON theo schema quy định. Đảm bảo tính toán Total Score (khuyên dùng: Job Fit * 0.5 + Potential * 0.3 + Cultural Fit * 0.2).
 `;
 
+export const TRANSLATE_SYSTEM_PROMPT = `Bạn là biên dịch viên chuyên nghiệp cho hệ thống tuyển dụng.
+Nhiệm vụ: dịch phần đánh giá ứng viên (do AI viết) sang tiếng Việt tự nhiên, đúng văn phong chuyên nghiệp của ngành nhân sự.
+
+QUY TẮC:
+1. Dịch đúng ý nghĩa, KHÔNG thêm bớt, KHÔNG suy diễn thông tin mới.
+2. Giữ nguyên tên riêng (tên người, tên công ty, tên công nghệ/công cụ/kỹ năng viết tắt như "React", "AWS"...), số liệu, ngày tháng.
+3. Nếu một đoạn text đã là tiếng Việt sẵn, giữ nguyên (không cần dịch lại).
+4. TRẢ VỀ ĐÚNG SCHEMA JSON được cung cấp — không thêm field, không bỏ field, không đổi số lượng phần tử trong mảng.`;
+
+export function buildTranslatePrompt(data: {
+  candidate_summary: string;
+  evaluation_reason: string;
+  hiring_risks: string[];
+  strengths: string[];
+  weaknesses: string[];
+  missing_information: string[];
+  recommended_interview_questions: string[];
+  evidence: {
+    skills_evidence: string[];
+    experience_evidence: string[];
+    culture_evidence: string[];
+    potential_evidence: string[];
+  };
+}): string {
+  return `Dịch nội dung JSON sau đây sang tiếng Việt, giữ nguyên cấu trúc:
+
+${JSON.stringify(data, null, 2)}`;
+}
+
 export function buildUserPrompt(data: {
   jobDescription: string;
   requiredSkills: string;

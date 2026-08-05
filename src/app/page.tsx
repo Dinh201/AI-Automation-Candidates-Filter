@@ -37,6 +37,54 @@ type TodayInterview = {
   candidates: { name: string; jobs: { title: string } | null } | null;
 };
 
+const STATUS_KEYS = ["New", "Scoring", "Scored", "Interviewing", "Hired", "Rejected"] as const;
+const DECISION_KEYS = ["STRONG HIRE", "HIRE", "CONSIDER", "REJECT"] as const;
+
+export type JobChartBucket = {
+  jobTitle: string;
+  total: number;
+  status: Record<string, number>;
+  decision: Record<string, number>;
+};
+
+export type CandidateChartData = {
+  overall: { total: number; status: Record<string, number>; decision: Record<string, number> };
+  byJob: JobChartBucket[];
+};
+
+function emptyCounter(keys: readonly string[]): Record<string, number> {
+  return Object.fromEntries(keys.map((k) => [k, 0]));
+}
+
+function buildChartData(
+  rows: { status: string; ai_score_result: CandidateScoringResult | null; jobs: { title: string } | null }[]
+): CandidateChartData {
+  const overallStatus = emptyCounter(STATUS_KEYS);
+  const overallDecision = emptyCounter(DECISION_KEYS);
+  const byJobMap = new Map<string, JobChartBucket>();
+
+  for (const row of rows) {
+    const jobTitle = row.jobs?.title ?? "Chưa gán vị trí";
+    const decision = row.ai_score_result?.final_decision;
+
+    if (row.status in overallStatus) overallStatus[row.status]++;
+    if (decision && decision in overallDecision) overallDecision[decision]++;
+
+    if (!byJobMap.has(jobTitle)) {
+      byJobMap.set(jobTitle, { jobTitle, total: 0, status: emptyCounter(STATUS_KEYS), decision: emptyCounter(DECISION_KEYS) });
+    }
+    const bucket = byJobMap.get(jobTitle)!;
+    bucket.total++;
+    if (row.status in bucket.status) bucket.status[row.status]++;
+    if (decision && decision in bucket.decision) bucket.decision[decision]++;
+  }
+
+  return {
+    overall: { total: rows.length, status: overallStatus, decision: overallDecision },
+    byJob: Array.from(byJobMap.values()).sort((a, b) => b.total - a.total),
+  };
+}
+
 async function getDashboardData() {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -59,6 +107,7 @@ async function getDashboardData() {
     { count: weekInterviewsCount },
     { data: todayInterviewsRaw },
     { data: weekCandidatesRaw },
+    { data: chartRowsRaw },
   ] = await Promise.all([
     supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "Open"),
     supabase.from("candidates").select("*", { count: "exact", head: true }),
@@ -91,6 +140,9 @@ async function getDashboardData() {
       .from("candidates")
       .select("created_at")
       .gte("created_at", sixDaysAgo.toISOString()),
+    supabase
+      .from("candidates")
+      .select("status, ai_score_result, jobs(title)"),
   ]);
 
   const strongHireCount =
@@ -113,6 +165,10 @@ async function getDashboardData() {
       ? Math.round((strongHireCount / totalCandidates) * 100)
       : 0;
 
+  const chartData = buildChartData(
+    (chartRowsRaw ?? []) as unknown as { status: string; ai_score_result: CandidateScoringResult | null; jobs: { title: string } | null }[]
+  );
+
   return {
     openJobsCount: openJobsCount ?? 0,
     totalCandidates: totalCandidates ?? 0,
@@ -124,6 +180,7 @@ async function getDashboardData() {
     weekInterviewsCount: weekInterviewsCount ?? 0,
     todayInterviews: (todayInterviewsRaw ?? []) as unknown as TodayInterview[],
     trendDays,
+    chartData,
   };
 }
 

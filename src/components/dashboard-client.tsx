@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n-context";
 import { CandidateScoringResult } from "@/services/ai/schema";
+import { CandidateStatusChart } from "@/components/candidate-status-chart";
+import type { CandidateChartData } from "@/app/page";
 
 type AuditLog = {
   id: string;
@@ -49,6 +51,7 @@ type DashboardData = {
   auditLogs: AuditLog[];
   todayInterviews: TodayInterview[];
   trendDays: { dateIso: string; count: number }[];
+  chartData: CandidateChartData;
 };
 
 function TrendChart({ days, todayLabel, otherDaysLabel, locale }: {
@@ -114,7 +117,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
   const {
     openJobsCount, totalCandidates, scoredCount, strongHireCount,
     conversionRate, weekInterviewsCount, recentCandidates,
-    auditLogs, todayInterviews, trendDays,
+    auditLogs, todayInterviews, trendDays, chartData,
   } = data;
 
   function decisionConfig(decision: string | undefined) {
@@ -317,6 +320,9 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </div>
         </div>
       </div>
+
+      {/* ── Candidate status chart (overall + per position) ── */}
+      <CandidateStatusChart data={chartData} />
 
       {/* ── Recent candidates table ── */}
       <div className="glass-card overflow-hidden">
