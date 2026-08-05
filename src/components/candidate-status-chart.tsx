@@ -12,7 +12,6 @@ const ALL_JOBS = "__all__";
 // đổi khi filter/metric thay đổi (color theo entity, không theo rank).
 const STATUS_META: { key: string; label: string; color: string }[] = [
   { key: "New", label: "Mới", color: "#d97706" },
-  { key: "Scoring", label: "Đang chấm điểm", color: "#3b82f6" },
   { key: "Scored", label: "Đã chấm điểm", color: "#16a34a" },
   { key: "Interviewing", label: "Đang phỏng vấn", color: "#a855f7" },
   { key: "Hired", label: "Đã tuyển", color: "#059669" },

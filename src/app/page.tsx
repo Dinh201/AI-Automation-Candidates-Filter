@@ -37,7 +37,7 @@ type TodayInterview = {
   candidates: { name: string; jobs: { title: string } | null } | null;
 };
 
-const STATUS_KEYS = ["New", "Scoring", "Scored", "Interviewing", "Hired", "Rejected"] as const;
+const STATUS_KEYS = ["New", "Scored", "Interviewing", "Hired", "Rejected"] as const;
 const DECISION_KEYS = ["STRONG HIRE", "HIRE", "CONSIDER", "REJECT"] as const;
 
 export type JobChartBucket = {

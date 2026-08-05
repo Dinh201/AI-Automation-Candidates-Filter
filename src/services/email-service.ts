@@ -219,11 +219,9 @@ function buildInterviewInviteCandidate(data: InterviewEmailData): string {
       </tr>`
     : "";
 
-  const notesBlock = data.notes
-    ? `<div style="border-left:3px solid #208994;padding:12px 16px;margin-bottom:24px;background:#eff6ff;border-radius:0 8px 8px 0">
-        <p style="margin:0;color:#1e40af;font-size:14px;line-height:1.6">${data.notes}</p>
-       </div>`
-    : "";
+  // Lưu ý: data.notes là "Ghi chú cho interviewer" — KHÔNG được đưa vào mail
+  // này (mail gửi cho ỨNG VIÊN). Ghi chú nội bộ chỉ hiện ở
+  // buildInterviewNotifyInterviewer / buildInterviewHRNotifyHtml.
 
   const body = `
     <p style="margin:0 0 20px;color:#09090b;font-size:15px">Dear <strong>${salut}</strong>,</p>
@@ -261,8 +259,6 @@ function buildInterviewInviteCandidate(data: InterviewEmailData): string {
         ${meetRow}
       </table>
     </div>
-
-    ${notesBlock}
 
     <p style="margin:0 0 6px;color:#374151;font-size:15px;line-height:1.7">
       Chúng tôi rất mong nhận được sự xác nhận tham dự từ bạn qua email này. Trong trường hợp bạn cần thêm thông tin hoặc gặp khó khăn về mặt thời gian, đừng ngần ngại liên hệ với chúng tôi để được hỗ trợ nhanh chóng.

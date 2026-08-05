@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { logAudit } from "@/services/audit-service";
-import { sendHiredNotification, sendRejectedNotification } from "@/services/email-service";
+import { sendHiredNotification, sendRejectedNotification, sendCustomOutcomeEmail } from "@/services/email-service";
 import { isValidEmailFormat } from "@/lib/candidate-email";
 
 export async function GET(
@@ -30,6 +30,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await request.json();
+  const { email_subject, email_body } = body as { email_subject?: string; email_body?: string };
 
   const allowed = ["status", "email"];
   const updates: Record<string, unknown> = {};
@@ -65,15 +66,27 @@ export async function PATCH(
       details: { new_status: updates.status },
     });
 
-    if (data.email) {
+    // Gửi email kết quả — ưu tiên nội dung HR đã xem/chỉnh trong popup xác
+    // nhận (email_subject/email_body); nếu không có (caller khác, tương
+    // thích ngược) thì rơi về template cố định như trước.
+    if (data.email && (updates.status === "Hired" || updates.status === "Rejected")) {
       const jobTitle = (data.jobs as { title?: string } | null)?.title ?? "vị trí đã ứng tuyển";
-      if (updates.status === "Rejected") {
+      const outcome = updates.status as "Hired" | "Rejected";
+
+      if (email_subject && email_body) {
+        sendCustomOutcomeEmail({
+          outcome,
+          candidateEmail: data.email,
+          subject: email_subject,
+          body: email_body,
+        }).catch((err) => console.error("[candidate] Gửi email kết quả thất bại:", err));
+      } else if (outcome === "Rejected") {
         sendRejectedNotification({
           candidateName: data.name,
           candidateEmail: data.email,
           jobTitle,
         }).catch((err) => console.error("[candidate] Gửi email từ chối thất bại:", err));
-      } else if (updates.status === "Hired") {
+      } else {
         sendHiredNotification({
           candidateName: data.name,
           candidateEmail: data.email,

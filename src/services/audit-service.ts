@@ -7,7 +7,8 @@ export type AuditAction =
   | "candidate_deleted"
   | "interview_scheduled"
   | "interview_outcome"
-  | "interview_invite_sent";
+  | "interview_invite_sent"
+  | "interview_calendar_synced";
 
 interface AuditParams {
   entity_type: "candidate" | "interview" | "job";

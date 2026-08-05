@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, Clock, User, ExternalLink, CheckCircle2, XCircle, AlertCircle, UserCheck, UserX, X } from "lucide-react";
+import { Calendar, Clock, User, ExternalLink, CheckCircle2, XCircle, AlertCircle, UserCheck, UserX, X, RefreshCw } from "lucide-react";
 import { useTranslation } from "@/lib/i18n-context";
 import { InterviewOutcomeModal } from "@/components/interview-outcome-modal";
 
@@ -64,6 +64,7 @@ export default function InterviewsPage() {
   const [calendarStatus, setCalendarStatus] = useState<"connected" | "disconnected" | "unknown">("unknown");
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   function statusConfig(status: string) {
     const labelMap: Record<string, string> = {
@@ -142,6 +143,28 @@ export default function InterviewsPage() {
       setInterviews((prev) =>
         prev.map((i) => (i.id === interviewId ? { ...i, status: "Completed" } : i))
       );
+    } finally {
+      setSubmitting(null);
+    }
+  }
+
+  async function syncCalendar(interviewId: string) {
+    setSubmitting(interviewId + "Sync");
+    setSyncError(null);
+    try {
+      const res = await fetch(`/api/interviews/${interviewId}/sync-calendar`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncError(data.error ?? "Không đồng bộ được với Google Calendar.");
+        return;
+      }
+      setInterviews((prev) =>
+        prev.map((i) =>
+          i.id === interviewId ? { ...i, google_event_id: data.google_event_id, meet_link: data.meet_link } : i
+        )
+      );
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Có lỗi xảy ra khi đồng bộ Calendar");
     } finally {
       setSubmitting(null);
     }
@@ -244,6 +267,23 @@ export default function InterviewsPage() {
           )}
         </div>
 
+        {iv.status === "Scheduled" && !iv.google_event_id && (
+          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3">
+            <div className="flex items-center gap-1.5 text-xs text-amber-400 mb-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              Chưa có sự kiện Google Calendar
+            </div>
+            <button
+              onClick={() => syncCalendar(iv.id)}
+              disabled={submitting === iv.id + "Sync"}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 text-xs font-medium hover:bg-indigo-500/25 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${submitting === iv.id + "Sync" ? "animate-spin" : ""}`} />
+              {submitting === iv.id + "Sync" ? "Đang đồng bộ..." : "Đồng bộ Google Calendar"}
+            </button>
+          </div>
+        )}
+
         {iv.status === "Scheduled" && (
           <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3 flex gap-2">
             <button
@@ -303,6 +343,18 @@ export default function InterviewsPage() {
           >
             {t("interviews.connectNow")}
           </a>
+        </div>
+      )}
+
+      {syncError && (
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {syncError}
+          </div>
+          <button onClick={() => setSyncError(null)} className="text-red-500/60 hover:text-red-300 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
