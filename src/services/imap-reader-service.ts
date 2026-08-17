@@ -3,9 +3,17 @@ import { simpleParser } from "mailparser";
 
 const PROCESSED_FOLDER = "AutoFilter-Processed";
 // Giới hạn thấp để mỗi lần quét chạy nhanh, tránh timeout phía cron caller
-// (vd cron-job.org free plan giới hạn ~30s). Cron chạy mỗi vài giờ nên email
-// dư sẽ được xử lý ở lần quét kế tiếp, không mất dữ liệu.
+// (vd cron-job.org free plan giới hạn ~30s). Cron chạy 1 lần/ngày (xem
+// vercel.json) nên email dư trong ngày sẽ được xử lý ở lần quét kế tiếp.
 const MAX_MESSAGES_PER_SCAN = 5;
+
+// Chỉ quét email trong 5 ngày gần nhất (dư ~4 ngày phòng cron bị trễ/miss
+// nhiều lần liên tiếp). Email cũ hơn (backlog tồn đọng lâu ngày, vd từ nhiều
+// tháng trước) sẽ KHÔNG được quét nữa — trước đây search không giới hạn ngày
+// nên khi số email mới trong ngày ít hơn MAX_MESSAGES_PER_SCAN, hệ thống lại
+// "đào" luôn backlog cũ lên xử lý, gây cảm giác quét lộn xộn/không theo thứ
+// tự thời gian.
+const SCAN_SINCE_DAYS = 5;
 
 export interface ImapAttachment {
   filename: string;
@@ -75,12 +83,17 @@ export async function scanImapInbox(
 
     try {
       const orCriteria = subjectKeywords.map((keyword) => ({ header: { subject: keyword } }));
-      const uids = await client.search({ or: orCriteria }, { uid: true });
+      const since = new Date(Date.now() - SCAN_SINCE_DAYS * 24 * 60 * 60 * 1000);
+      const uids = await client.search({ or: orCriteria, since }, { uid: true });
       if (!uids || uids.length === 0) return 0;
 
-      const recentUids = uids.slice(-MAX_MESSAGES_PER_SCAN);
+      // Lấy UID nhỏ nhất (email CŨ nhất) trước — xử lý theo đúng thứ tự
+      // email tới (FIFO). Mail đến trước xử lý trước, mail mới xếp hàng chờ
+      // chứ không chen ngang; mail đã xử lý xong sẽ được move sang
+      // AutoFilter-Processed nên lần quét sau không thấy lại UID đó nữa.
+      const oldestUids = [...uids].sort((a, b) => a - b).slice(0, MAX_MESSAGES_PER_SCAN);
 
-      for (const uid of recentUids) {
+      for (const uid of oldestUids) {
         const message = await client.fetchOne(uid, { source: true }, { uid: true });
         if (!message || !message.source) continue;
 
