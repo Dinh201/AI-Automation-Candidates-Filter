@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Calendar, Clock, User, ExternalLink, CheckCircle2, XCircle, AlertCircle, UserCheck, UserX, X, RefreshCw } from "lucide-react";
 import { useTranslation } from "@/lib/i18n-context";
 import { InterviewOutcomeModal } from "@/components/interview-outcome-modal";
+import { ResendInviteModal } from "@/components/resend-invite-modal";
 
 type Interview = {
   id: string;
@@ -285,7 +286,13 @@ export default function InterviewsPage() {
         )}
 
         {iv.status === "Scheduled" && (
-          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3 flex gap-2">
+          <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3">
+            <ResendInviteModal interviewId={iv.id} candidateName={iv.candidates?.name ?? "—"} />
+          </div>
+        )}
+
+        {iv.status === "Scheduled" && (
+          <div className="flex gap-2">
             <button
               onClick={() => markCompleted(iv.id)}
               disabled={submitting === iv.id + "Complete"}

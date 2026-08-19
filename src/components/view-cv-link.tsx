@@ -19,6 +19,17 @@ export function ViewCvLink({
     setLoading(true);
     try {
       const res = await fetch(`/api/candidates/${candidateId}/cv-url`);
+
+      // Phiên đăng nhập hết hạn → middleware redirect về /login (HTML), fetch
+      // tự follow redirect nên res.ok vẫn true nhưng body không phải JSON.
+      // Phát hiện sớm để báo đúng nguyên nhân thay vì "Không mở được CV"
+      // gây hiểu lầm là file lỗi.
+      if (res.redirected && res.url.includes("/login")) {
+        alert("Phiên đăng nhập đã hết hạn. Trang sẽ tải lại để bạn đăng nhập lại.");
+        window.location.href = "/login";
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok || !data.url) {
         alert(data.error || "Không mở được CV. Vui lòng thử lại.");

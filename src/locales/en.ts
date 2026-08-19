@@ -422,6 +422,7 @@ export const en = {
     resultPositionLabel: "Position:",
     viewProfile: "View Profile",
     reanalyze: "Re-analyze",
+    analyzeAnother: "Analyze another CV",
     totalScoreSuffix: "total score / 10",
     potential: "Potential",
     culture: "Culture",

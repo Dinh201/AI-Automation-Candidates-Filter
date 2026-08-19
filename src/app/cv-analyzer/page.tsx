@@ -508,6 +508,13 @@ function CvAnalyzerContent() {
         </div>
       </Collapsible>
 
+      {/* Analyze another CV — full-width CTA at the bottom so HR doesn't have
+          to scroll back up after reviewing the whole result. */}
+      <button onClick={reset}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 transition-colors">
+        <RotateCcw className="w-4 h-4 text-white" /> {t("cvAnalyzer.analyzeAnother")}
+      </button>
+
       <div className="h-6" />
     </div>
   );

@@ -422,6 +422,7 @@ export const vi = {
     resultPositionLabel: "Vị trí:",
     viewProfile: "Xem hồ sơ",
     reanalyze: "Phân tích lại",
+    analyzeAnother: "Phân tích CV khác",
     totalScoreSuffix: "tổng điểm / 10",
     potential: "Tiềm năng",
     culture: "Văn hóa",
