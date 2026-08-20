@@ -44,6 +44,8 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: `Gửi mail thất bại: ${message}`, code: "EMAIL_SEND_FAILED" }, { status: 500 });
   }
 
+  await supabaseAdmin.from("interviews").update({ invite_sent: true }).eq("id", id);
+
   logAudit({
     entity_type: "interview",
     entity_id: id,

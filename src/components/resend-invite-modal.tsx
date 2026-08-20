@@ -7,6 +7,7 @@ import { RichTextEditor } from "@/components/rich-text-editor";
 interface Props {
   interviewId: string;
   candidateName: string;
+  onSent?: () => void;
 }
 
 type Branch = "hcm" | "hanoi";
@@ -15,7 +16,7 @@ type Branch = "hcm" | "hanoi";
 // bước "soạn mail mời" trong ScheduleInterviewModal bị lỡ (đóng popup, mất
 // mạng, Gmail token hết hạn...) sau khi lịch đã tạo thành công. Không tạo
 // lại lịch, chỉ dùng lại /invite-draft + /send-invite trên interview có sẵn.
-export function ResendInviteModal({ interviewId, candidateName }: Props) {
+export function ResendInviteModal({ interviewId, candidateName, onSent }: Props) {
   const [open, setOpen] = useState(false);
   const [branch, setBranch] = useState<Branch>("hcm");
   const [subject, setSubject] = useState("");
@@ -70,6 +71,7 @@ export function ResendInviteModal({ interviewId, candidateName }: Props) {
         return;
       }
       setSent(true);
+      onSent?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Có lỗi xảy ra khi gửi mail");
     } finally {

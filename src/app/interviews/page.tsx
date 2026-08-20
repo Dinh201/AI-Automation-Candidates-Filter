@@ -18,6 +18,7 @@ type Interview = {
   meet_link: string | null;
   google_event_id: string | null;
   notes: string | null;
+  invite_sent: boolean;
   candidates: {
     name: string;
     email: string;
@@ -130,6 +131,12 @@ export default function InterviewsPage() {
           ? { ...i, candidates: i.candidates ? { ...i.candidates, status: outcome } : null }
           : i
       )
+    );
+  }
+
+  function handleInviteSent(interviewId: string) {
+    setInterviews((prev) =>
+      prev.map((i) => (i.id === interviewId ? { ...i, invite_sent: true } : i))
     );
   }
 
@@ -285,9 +292,13 @@ export default function InterviewsPage() {
           </div>
         )}
 
-        {iv.status === "Scheduled" && (
+        {iv.status === "Scheduled" && !iv.invite_sent && (
           <div style={{ borderTop: "1px solid var(--ats-border)" }} className="pt-3">
-            <ResendInviteModal interviewId={iv.id} candidateName={iv.candidates?.name ?? "—"} />
+            <ResendInviteModal
+              interviewId={iv.id}
+              candidateName={iv.candidates?.name ?? "—"}
+              onSent={() => handleInviteSent(iv.id)}
+            />
           </div>
         )}
 

@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS public.interviews (
                                 CHECK (status IN (
                                   'Scheduled', 'Completed', 'Cancelled', 'Rescheduled'
                                 )),
+  invite_sent       BOOLEAN     NOT NULL DEFAULT false,
 
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
