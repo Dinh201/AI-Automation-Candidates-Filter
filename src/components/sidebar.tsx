@@ -211,10 +211,23 @@ export function Sidebar() {
             <div className="space-y-0.5">
               {group.items.map(({ href, label, icon: Icon, exact }) => {
                 const active = isActive(href, exact);
+                // /cv-analyzer đang active thì Next.js không điều hướng lại
+                // (cùng route) nên state kết quả phân tích cũ vẫn còn — bắn
+                // sự kiện để trang tự reset về màn hình upload thay vì
+                // không làm gì khi bấm lại mục này.
+                const isCvAnalyzerReclick = href === "/cv-analyzer" && active;
                 return (
                   <Link
                     key={href}
                     href={href}
+                    onClick={
+                      isCvAnalyzerReclick
+                        ? (e) => {
+                            e.preventDefault();
+                            window.dispatchEvent(new Event("ats_cv_analyzer_reset"));
+                          }
+                        : undefined
+                    }
                     className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 group"
                     style={
                       active

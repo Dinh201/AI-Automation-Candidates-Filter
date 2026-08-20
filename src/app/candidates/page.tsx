@@ -106,6 +106,7 @@ export default function CandidatesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [decisionFilter, setDecisionFilter] = useState("");
+  const [jobFilter, setJobFilter] = useState("");
   const [sortBy, setSortBy] = useState<"created_at" | "total_score">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -151,13 +152,24 @@ export default function CandidatesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const hasActiveFilters = !!search || !!statusFilter || !!decisionFilter;
+  const hasActiveFilters = !!search || !!statusFilter || !!decisionFilter || !!jobFilter;
 
   function clearFilters() {
     setSearch("");
     setStatusFilter("");
     setDecisionFilter("");
+    setJobFilter("");
   }
+
+  const jobOptions: FilterOption[] = useMemo(() => {
+    const titles = Array.from(
+      new Set(candidates.map((c) => c.jobs?.title).filter((t): t is string => !!t))
+    ).sort();
+    return [
+      { value: "", label: t("common.all") },
+      ...titles.map((title) => ({ value: title, label: title })),
+    ];
+  }, [candidates, t]);
 
   async function handleScanGmail() {
     setScanning(true);
@@ -237,6 +249,10 @@ export default function CandidatesPage() {
       list = list.filter((c) => c.ai_score_result?.final_decision === decisionFilter);
     }
 
+    if (jobFilter !== "") {
+      list = list.filter((c) => c.jobs?.title === jobFilter);
+    }
+
     list = [...list].sort((a, b) => {
       const valA = sortBy === "total_score" ? (a.total_score ?? -1) : new Date(a.created_at).getTime();
       const valB = sortBy === "total_score" ? (b.total_score ?? -1) : new Date(b.created_at).getTime();
@@ -244,7 +260,7 @@ export default function CandidatesPage() {
     });
 
     return list;
-  }, [candidates, search, statusFilter, decisionFilter, sortBy, sortDir]);
+  }, [candidates, search, statusFilter, decisionFilter, jobFilter, sortBy, sortDir]);
 
   function toggleSort(col: "created_at" | "total_score") {
     if (sortBy === col) setSortDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -446,6 +462,13 @@ export default function CandidatesPage() {
             className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 dark:bg-white/[0.05] dark:border-white/[0.08] rounded-lg text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50"
           />
         </div>
+
+        <FilterSelect
+          label={t("candidates.col.position")}
+          value={jobFilter}
+          onChange={setJobFilter}
+          options={jobOptions}
+        />
 
         <FilterSelect
           label={t("candidates.col.status")}

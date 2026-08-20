@@ -416,6 +416,7 @@ export const en = {
     email: "Email",
     analyzeBtn: "Analyze with AI →",
     pdfOnlyError: "Only PDF files are accepted",
+    fileTooLargeError: "CV file is too large (max 10MB). Please compress or re-export a smaller PDF.",
     genericError: "An error occurred",
     analyzing: "AI is analyzing the CV...",
     analyzingHint: "This usually takes about 20–40 seconds",

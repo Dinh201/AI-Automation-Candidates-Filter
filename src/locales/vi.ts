@@ -416,6 +416,7 @@ export const vi = {
     email: "Email",
     analyzeBtn: "Phân tích với AI →",
     pdfOnlyError: "Chỉ chấp nhận file PDF",
+    fileTooLargeError: "File CV quá lớn (tối đa 10MB). Vui lòng nén hoặc xuất lại file PDF nhỏ hơn.",
     genericError: "Có lỗi xảy ra",
     analyzing: "AI đang phân tích CV...",
     analyzingHint: "Quá trình này mất khoảng 20–40 giây",

@@ -14,9 +14,16 @@ import { Label } from "@/components/ui/label";
 import { CandidateScoringResult } from "@/services/ai/schema";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n-context";
+import { createSupabaseBrowser } from "@/lib/supabase-browser";
 
 type Job = { id: string; title: string };
 type Phase = "upload" | "analyzing" | "result";
+
+// File PDF được upload thẳng từ trình duyệt lên Supabase Storage (qua signed
+// upload URL, xem handleAnalyze) thay vì gửi qua serverless function — Vercel
+// giới hạn cứng 4.5MB/request cho function nên không thể gửi file lớn qua đó.
+// 10MB khớp với fileSizeLimit của bucket cv_uploads.
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 const DECISION_CONFIG = {
   "STRONG HIRE": { labelKey: "cvAnalyzer.decision.strongHire", bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30" },
@@ -156,27 +163,67 @@ function CvAnalyzerContent() {
   // Show compact badge instead of dropdown when job is pre-determined
   const isJobLocked = !!presetJobId || jobs.length === 1;
 
+  const acceptFile = useCallback((picked: File) => {
+    if (picked.type !== "application/pdf") {
+      setError(t("cvAnalyzer.pdfOnlyError"));
+      return;
+    }
+    if (picked.size > MAX_FILE_SIZE_BYTES) {
+      setError(t("cvAnalyzer.fileTooLargeError"));
+      return;
+    }
+    setFile(picked);
+    setError("");
+  }, [t]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const dropped = e.dataTransfer.files[0];
-    if (dropped?.type === "application/pdf") { setFile(dropped); setError(""); }
-    else setError(t("cvAnalyzer.pdfOnlyError"));
-  }, [t]);
+    if (dropped) acceptFile(dropped);
+  }, [acceptFile]);
 
   const handleAnalyze = async () => {
     if (!file || !selectedJobId) return;
     setError("");
     setPhase("analyzing");
     try {
-      const fd = new FormData();
-      fd.append("cv", file);
-      fd.append("job_id", selectedJobId);
-      if (candidateName.trim())  fd.append("name", candidateName.trim());
-      if (candidateEmail.trim()) fd.append("email", candidateEmail.trim());
+      // Bước 1: xin signed upload URL rồi upload file thẳng lên Supabase
+      // Storage — không đi qua serverless function nên không bị giới hạn
+      // 4.5MB/request của Vercel.
+      const urlRes = await fetch("/api/cv-analyze/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: selectedJobId, file_name: file.name }),
+      });
+      const urlData = await urlRes.json();
+      if (!urlRes.ok) throw new Error(urlData.error || t("cvAnalyzer.genericError"));
 
-      const res  = await fetch("/api/cv-analyze", { method: "POST", body: fd });
-      const data = await res.json();
+      const supabase = createSupabaseBrowser();
+      const { error: uploadError } = await supabase.storage
+        .from("cv_uploads")
+        .uploadToSignedUrl(urlData.path, urlData.token, file, { contentType: "application/pdf" });
+      if (uploadError) throw new Error(uploadError.message || t("cvAnalyzer.genericError"));
+
+      // Bước 2: gọi API chấm điểm — chỉ gửi JSON nhỏ (đường dẫn file), file
+      // đã nằm sẵn trên Storage nên server tự đọc lại từ đó.
+      const res = await fetch("/api/cv-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_id: selectedJobId,
+          cv_path: urlData.path,
+          name: candidateName.trim() || undefined,
+          email: candidateEmail.trim() || undefined,
+        }),
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- boundary: shape of res.json() isn't statically known
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(t("cvAnalyzer.genericError"));
+      }
       if (!res.ok) throw new Error(data.error || t("cvAnalyzer.genericError"));
 
       setResult(data.result);
@@ -195,6 +242,14 @@ function CvAnalyzerContent() {
     setError(""); setJobTitle(""); setCandidateId("");
     setCandidateName(""); setCandidateEmail("");
   };
+
+  // Bấm lại mục "Phân tích CV" trên sidebar khi đang ở chính trang này
+  // (Next.js không điều hướng lại vì cùng route) — reset về màn hình upload
+  // để tiếp tục phân tích CV khác.
+  useEffect(() => {
+    window.addEventListener("ats_cv_analyzer_reset", reset);
+    return () => window.removeEventListener("ats_cv_analyzer_reset", reset);
+  }, []);
 
   /* ── Upload ── */
   if (phase === "upload") {
@@ -285,7 +340,7 @@ function CvAnalyzerContent() {
             type="file"
             accept="application/pdf"
             className="hidden"
-            onChange={(e) => { if (e.target.files?.[0]) { setFile(e.target.files[0]); setError(""); } }}
+            onChange={(e) => { if (e.target.files?.[0]) acceptFile(e.target.files[0]); }}
           />
         </div>
 
