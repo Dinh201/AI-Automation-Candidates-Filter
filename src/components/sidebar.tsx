@@ -128,6 +128,25 @@ export function Sidebar() {
     return () => window.removeEventListener("ats_profile_updated", onProfileUpdated);
   }, []);
 
+  // "Duy trì đăng nhập" tắt ở trang login → nếu cookie đánh dấu phiên trình
+  // duyệt (không có Max-Age, tự mất khi đóng hẳn trình duyệt) đã biến mất
+  // nghĩa là trình duyệt đã khởi động lại — tự đăng xuất thay vì để cookie
+  // 400 ngày mặc định của Supabase giữ phiên vô thời hạn.
+  useEffect(() => {
+    try {
+      const remember = localStorage.getItem("ats_remember_me");
+      if (remember !== "0") return;
+      const hasMarker = document.cookie.split("; ").some((c) => c.startsWith("ats_session_marker="));
+      if (hasMarker) return;
+      const supabase = createSupabaseBrowser();
+      supabase.auth.signOut().finally(() => {
+        window.location.replace("/login");
+      });
+    } catch {
+      // localStorage/cookie không đọc được — coi như duy trì đăng nhập bình thường
+    }
+  }, []);
+
   useEffect(() => {
     const supabase = createSupabaseBrowser();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -156,6 +175,11 @@ export function Sidebar() {
   }, []);
 
   async function handleSignOut() {
+    try {
+      localStorage.removeItem("ats_remember_me");
+    } catch {
+      // ignore
+    }
     // Dùng server-side logout để Set-Cookie headers xóa cookie đúng cách
     try {
       await fetch("/api/auth/logout", { method: "POST" });

@@ -61,6 +61,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm]   = useState("");
   const [showPw, setShowPw]     = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [success, setSuccess]   = useState<string | null>(null);
@@ -116,6 +117,19 @@ function LoginForm() {
       );
       setLoading(false);
       return;
+    }
+
+    // Supabase luôn ghi cookie phiên đăng nhập tồn tại cố định 400 ngày,
+    // không cho tùy chỉnh qua client — nên "Duy trì đăng nhập" tắt được mô
+    // phỏng riêng: ghi thêm 1 cookie đánh dấu KHÔNG có Max-Age (tự hết khi
+    // đóng hẳn trình duyệt, dùng chung mọi tab) + lưu lựa chọn vào
+    // localStorage. Sidebar sẽ tự đăng xuất nếu phát hiện cookie đánh dấu
+    // đã mất (trình duyệt đã khởi động lại) trong khi lựa chọn là "tắt".
+    try {
+      localStorage.setItem("ats_remember_me", rememberMe ? "1" : "0");
+      document.cookie = "ats_session_marker=1; path=/; SameSite=Lax";
+    } catch {
+      // localStorage/cookie không khả dụng — coi như luôn duy trì đăng nhập
     }
 
     await goToAppOrConnectCalendar();
@@ -267,6 +281,20 @@ function LoginForm() {
             <InputField label="Mật khẩu" type={showPw ? "text" : "password"} value={password} onChange={setPassword} placeholder="••••••••" disabled={loading}>
               <EyeBtn />
             </InputField>
+
+            <label style={{
+              display: "flex", alignItems: "center", gap: 8, cursor: loading ? "not-allowed" : "pointer",
+              userSelect: "none", marginTop: -2,
+            }}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={loading}
+                style={{ width: 15, height: 15, accentColor: "#06b6d4", cursor: loading ? "not-allowed" : "pointer" }}
+              />
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)" }}>Duy trì đăng nhập</span>
+            </label>
 
             <button
               className="lp-btn"
