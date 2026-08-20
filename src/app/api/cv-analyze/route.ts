@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Buffer } from "buffer";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { extractTextFromPDF } from "@/lib/pdf-parser";
+import { extractTextFromPdfViaOCR } from "@/lib/pdf-ocr";
 import { scoreCandidate } from "@/services/ai/scoring";
 import { logAudit } from "@/services/audit-service";
 import { MISSING_EMAIL_PLACEHOLDER, isValidEmailFormat } from "@/lib/candidate-email";
@@ -87,7 +88,30 @@ export async function POST(request: Request) {
     });
 
     // Chạy AI scoring
-    const cvText = await extractTextFromPDF(Buffer.from(new Uint8Array(fileBuffer)));
+    let cvText: string;
+    try {
+      cvText = await extractTextFromPDF(Buffer.from(new Uint8Array(fileBuffer)));
+    } catch {
+      // Không lấy được chữ theo cách thường (PDF dạng ảnh scan, hoặc chữ bị
+      // "vẽ" thành đường nét/outline thay vì chữ mã hóa — vd file xuất từ
+      // Canva/Illustrator) — thử lại bằng OCR (render từng trang thành ảnh
+      // rồi nhờ AI đọc chữ trong ảnh) trước khi báo lỗi hẳn.
+      try {
+        cvText = await extractTextFromPdfViaOCR(Buffer.from(new Uint8Array(fileBuffer)));
+      } catch (ocrError: unknown) {
+        // Dọn candidate vừa tạo (đang kẹt ở status "Scoring") vì không chấm
+        // điểm được — tránh để lại bản ghi rỗng trong danh sách ứng viên.
+        await supabaseAdmin.from("candidates").delete().eq("id", candidate.id);
+        console.error("Lỗi OCR fallback:", ocrError);
+        return NextResponse.json(
+          {
+            error: "Không đọc được chữ trong file PDF này, kể cả bằng OCR. File có thể trống, hỏng, hoặc chất lượng ảnh quá kém. Vui lòng kiểm tra lại file và thử upload lại.",
+            code: "CV_PARSE_FAILED",
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     let result = await scoreCandidate({
       jobDescription: job.description,
