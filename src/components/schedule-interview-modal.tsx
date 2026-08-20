@@ -51,7 +51,10 @@ export function ScheduleInterviewModal({
   const [step, setStep] = useState<Step>("form");
   const [emailInput, setEmailInput] = useState(candidateEmail);
   const [savingEmail, setSavingEmail] = useState(false);
-  const needsEmail = isMissingCandidateEmail(emailInput);
+  // Cố định theo email GỐC của ứng viên lúc mở modal — không được tính lại
+  // từ emailInput đang gõ dở, nếu không ô nhập sẽ tự ẩn ngay khi gõ ký tự
+  // đầu tiên (vì lúc đó emailInput không còn "trông thiếu" nữa).
+  const needsEmail = isMissingCandidateEmail(candidateEmail);
 
   const [form, setForm] = useState({
     interviewer_name: "",
