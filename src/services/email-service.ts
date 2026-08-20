@@ -382,8 +382,8 @@ function buildHcmInviteDraft(data: InviteDraftData): OutcomeDraft {
 
   return {
     subject: `[${COMPANY}] Thư mời phỏng vấn – ${data.jobTitle}`,
-    body: `<p>Dear ${salut},</p>
-<p>${COMPANY_VI} chân thành cảm ơn bạn đã quan tâm đến vị trí <strong>${jobTitle}</strong> mà chúng tôi đang tuyển dụng.</p>
+    body: `<p>Dear <strong>${salut}</strong>,</p>
+<p><strong>${COMPANY_VI}</strong> chân thành cảm ơn bạn đã quan tâm đến vị trí <strong>${jobTitle}</strong> mà chúng tôi đang tuyển dụng.</p>
 <p><em>${COMPANY_EN} sincerely thanks you for your interest in the ${jobTitle} position we are currently hiring for.</em></p>
 <p>Chúng tôi rất hân hạnh mời bạn đến tham dự buổi phỏng vấn trực tiếp với thông tin như sau:</p>
 <p><em>We are pleased to invite you to attend a face-to-face interview with the following details:</em></p>
@@ -408,7 +408,7 @@ function buildHanoiInviteDraft(data: InviteDraftData): OutcomeDraft {
 
   return {
     subject: `[${COMPANY}] Trao đổi cơ hội nghề nghiệp – ${data.jobTitle}`,
-    body: `<p>Dear ${salut},</p>
+    body: `<p>Dear <strong>${salut}</strong>,</p>
 <p>I'm Alice, representing the HR team at VACONS – a construction and architecture company.</p>
 <p>Tôi là Alice, đại diện bộ phận Nhân sự tại VACONS – công ty hoạt động trong lĩnh vực xây dựng và kiến trúc.</p>
 <p>I came across your profile on Vietnamwork and was particularly impressed by your experience in business development.</p>
@@ -594,8 +594,8 @@ export function buildOutcomeDraft(outcome: "Hired" | "Rejected", data: OutcomeEm
   if (outcome === "Hired") {
     return {
       subject: `[${COMPANY}] Chúc mừng! Bạn đã được tuyển dụng – ${data.jobTitle}`,
-      body: `<p>Dear ${salut},</p>
-<p>${COMPANY_VI} trân trọng thông báo ${pronoun} đã <strong>trúng tuyển vị trí ${jobTitle}</strong> tại công ty.</p>
+      body: `<p>Dear <strong>${salut}</strong>,</p>
+<p><strong>${COMPANY_VI}</strong> trân trọng thông báo ${pronoun} đã <strong>trúng tuyển vị trí ${jobTitle}</strong> tại công ty.</p>
 <p><em>${COMPANY_EN} is pleased to inform you that you have been selected for the ${jobTitle} position.</em></p>
 <p>Chúng tôi đánh giá cao năng lực, kinh nghiệm cũng như sự phù hợp của ${pronoun} với văn hóa VACONS, và tin rằng ${pronoun} sẽ đóng góp tích cực vào sự phát triển của đội ngũ.</p>
 <p><em>We highly appreciate your qualifications and believe you will be a valuable addition to our team.</em></p>
@@ -609,8 +609,8 @@ export function buildOutcomeDraft(outcome: "Hired" | "Rejected", data: OutcomeEm
 
   return {
     subject: `[${COMPANY}] Kết quả ứng tuyển – ${data.jobTitle}`,
-    body: `<p>Dear ${escapeHtml(data.candidateName)},</p>
-<p>${COMPANY_VI} chân thành cảm ơn bạn đã tham gia phỏng vấn cho vị trí ${jobTitle} tại công ty.</p>
+    body: `<p>Dear <strong>${escapeHtml(data.candidateName)}</strong>,</p>
+<p><strong>${COMPANY_VI}</strong> chân thành cảm ơn bạn đã tham gia phỏng vấn cho vị trí ${jobTitle} tại công ty.</p>
 <p><em>${COMPANY_EN} sincerely thanks you for attending the interview for the ${jobTitle} position.</em></p>
 <p>Sau khi đánh giá kỹ hồ sơ, chúng tôi rất tiếc thông báo rằng <strong>${COMPANY} chưa thể tiếp tục với đơn ứng tuyển của bạn ở thời điểm này</strong>. Quyết định này dựa trên định hướng và nhu cầu hiện tại của vị trí, không phản ánh toàn diện giá trị và kinh nghiệm mà bạn mang lại.</p>
 <p><em>After careful evaluation, we regret to inform you that ${COMPANY} will not be proceeding with your application at this time. This decision reflects the current direction and needs of the position and is not a full assessment of your experience or professional strengths.</em></p>
