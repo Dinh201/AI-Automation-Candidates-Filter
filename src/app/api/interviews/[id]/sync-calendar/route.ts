@@ -84,10 +84,8 @@ export async function POST(_request: Request, { params }: Params) {
       ].filter(Boolean).join("\n"),
       startTime: new Date(interview.start_time),
       endTime: new Date(interview.end_time),
-      attendees: [
-        { email: candidate.email, name: candidate.name },
-        { email: interview.interviewer_email, name: interview.interviewer_name },
-      ],
+      // Chỉ mời ứng viên — xem ghi chú tương tự ở /api/interviews/schedule.
+      attendees: [{ email: candidate.email, name: candidate.name }],
     });
 
     await supabaseAdmin

@@ -170,10 +170,11 @@ export async function POST(request: Request) {
         ].filter(Boolean).join("\n"),
         startTime: startDate,
         endTime: endDate,
-        attendees: [
-          { email: candidate.email, name: candidate.name },
-          { email: interviewer_email, name: interviewer_name },
-        ],
+        // Chỉ mời ứng viên — HR/interviewer là người tạo lịch nên đã biết, và
+        // đã có mail thông báo riêng (sendInterviewerNotification /
+        // sendInterviewHRNotification) nên không cần Google Calendar gửi thêm
+        // thư mời sự kiện trùng lặp vào hộp mail của họ.
+        attendees: [{ email: candidate.email, name: candidate.name }],
       });
 
       googleEventId = event.eventId;
