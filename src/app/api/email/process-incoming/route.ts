@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Buffer } from "buffer";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { extractTextFromPDF } from "@/lib/pdf-parser";
+import { isValidEmailFormat, MISSING_EMAIL_PLACEHOLDER } from "@/lib/candidate-email";
 import { scoreCandidate } from "@/services/ai/scoring";
 import { sendCandidateAppliedNotification } from "@/services/email-service";
 import {
@@ -54,6 +55,20 @@ const SUBJECT_ALIASES: { keyword: string; jobTitle: string }[] = [
   // Thêm dòng mới ở đây theo cú pháp: { keyword: "...", jobTitle: "..." },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Một số email quét được là do NHÂN VIÊN NỘI BỘ forward hộ CV ứng viên (VD:
+// "Fwd: Nhân viên Content Marketing - Tạ Ngọc Bảo Trâm"), không phải ứng viên
+// tự gửi. Nếu dùng thẳng tên/email người gửi (người forward) làm tên/email
+// ứng viên, thư mời phỏng vấn sau này sẽ bị gửi nhầm vào hộp mail nội bộ thay
+// vì tới ứng viên thật. Nhận diện qua tiền tố "Fwd/FW:" ở tiêu đề hoặc domain
+// email nội bộ công ty, để ưu tiên dùng tên/email AI trích xuất từ CV thay vì
+// tin theo người gửi trong các trường hợp này.
+const FORWARD_SUBJECT_PREFIX = /^\s*fwd?\s*:/i;
+const INTERNAL_EMAIL_DOMAIN = "@vacons.com.vn";
+
+function isForwardedByStaff(subject: string, senderEmail: string): boolean {
+  return FORWARD_SUBJECT_PREFIX.test(subject) || senderEmail.toLowerCase().endsWith(INTERNAL_EMAIL_DOMAIN);
+}
 
 type JobRef = { id: string; title: string };
 
@@ -138,6 +153,12 @@ async function processCandidateEmail(params: {
     .createSignedUrl(fileName, 60 * 24 * 60 * 60);
   const cvUrl = signedUrlData?.signedUrl ?? fileName;
 
+  // Nếu đây là email forward từ nhân viên nội bộ, email người gửi (người
+  // forward) KHÔNG phải email ứng viên — dùng placeholder thay vì lưu nhầm,
+  // chờ AI trích xuất email thật từ CV bên dưới.
+  const forwardedByStaff = isForwardedByStaff(subject, senderEmail);
+  const initialEmail = forwardedByStaff ? MISSING_EMAIL_PLACEHOLDER : senderEmail;
+
   // Create candidate record
   const { data: candidate, error: dbError } = await supabaseAdmin
     .from("candidates")
@@ -145,7 +166,7 @@ async function processCandidateEmail(params: {
       {
         job_id: matchedJob.id,
         name: senderName,
-        email: senderEmail,
+        email: initialEmail,
         phone: null,
         form_answers: `Nguồn: Email tự động | Tiêu đề email: ${subject}`,
         cv_url: cvUrl,
@@ -163,6 +184,8 @@ async function processCandidateEmail(params: {
   // AI Scoring
   let aiResult = null;
   let scoringFailed = false;
+  let candidateName = senderName;
+  let candidateEmail = initialEmail;
 
   const { data: job } = await supabaseAdmin
     .from("jobs")
@@ -194,6 +217,15 @@ async function processCandidateEmail(params: {
       );
       aiResult = { ...aiResult, total_score: totalScore };
 
+      // Nếu là email forward, ưu tiên tên/email AI trích xuất được từ chính
+      // nội dung CV thay vì tên/email người forward (xem isForwardedByStaff).
+      if (forwardedByStaff) {
+        const aiName = aiResult.candidate_name?.trim() || "";
+        const aiEmail = aiResult.candidate_email?.trim() || "";
+        if (aiName) candidateName = aiName;
+        if (isValidEmailFormat(aiEmail)) candidateEmail = aiEmail;
+      }
+
       await supabaseAdmin
         .from("candidates")
         .update({
@@ -201,6 +233,8 @@ async function processCandidateEmail(params: {
           total_score: totalScore,
           missing_information: aiResult.missing_information.length > 0,
           status: "Scored",
+          ...(candidateName !== senderName ? { name: candidateName } : {}),
+          ...(candidateEmail !== initialEmail ? { email: candidateEmail } : {}),
         })
         .eq("id", candidate.id);
 
@@ -219,8 +253,8 @@ async function processCandidateEmail(params: {
 
   // Notify HR (non-blocking)
   sendCandidateAppliedNotification({
-    candidateName: senderName,
-    candidateEmail: senderEmail,
+    candidateName,
+    candidateEmail,
     jobTitle: matchedJob.title,
     candidateId: candidate.id,
     appUrl,
@@ -231,7 +265,7 @@ async function processCandidateEmail(params: {
   }).catch((err) => console.error("[email-scan] Gửi thông báo HR thất bại:", err));
 
   return {
-    email: senderEmail,
+    email: candidateEmail,
     status: "ok",
     candidateId: candidate.id,
     jobTitle: matchedJob.title,
