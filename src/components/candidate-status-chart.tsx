@@ -250,8 +250,8 @@ function StackedAreaChart({
             background: "var(--ats-surface)",
             border: "1px solid var(--ats-border)",
             left: `${(xAt(hoverIndex) / SVG_W) * 100}%`,
-            top: 4,
-            transform: `translateX(${hoverIndex === 0 ? "0%" : hoverIndex === n - 1 ? "-100%" : "-50%"})`,
+            top: `${(Math.max(yAt(totals[hoverIndex]) - 10, MARGIN.top - 10) / SVG_H) * 100}%`,
+            transform: `translate(${hoverIndex === 0 ? "0%" : hoverIndex === n - 1 ? "-100%" : "-50%"}, -100%)`,
             minWidth: 140,
           }}
         >
