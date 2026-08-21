@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  Users, Briefcase, TrendingUp, ArrowRight, Clock,
+  Users, Briefcase, ArrowRight, Clock,
   Activity, Calendar, Target, BarChart2, Video, ChevronRight, Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n-context";
@@ -115,8 +115,8 @@ export function DashboardClient({ data }: { data: DashboardData }) {
   const locale = lang === "en" ? "en-US" : "vi-VN";
 
   const {
-    openJobsCount, totalCandidates, scoredCount, strongHireCount,
-    conversionRate, weekInterviewsCount, recentCandidates,
+    openJobsCount, totalCandidates, scoredCount,
+    weekInterviewsCount, recentCandidates,
     auditLogs, todayInterviews, trendDays, chartData,
   } = data;
 
@@ -198,15 +198,6 @@ export function DashboardClient({ data }: { data: DashboardData }) {
       href: "/jobs",
       note: t("dashboard.openJobsNote"),
     },
-    {
-      label: t("dashboard.strongHire"),
-      value: strongHireCount,
-      icon: TrendingUp,
-      iconCls: "text-slate-700",
-      cardCls: "stat-emerald",
-      href: "/candidates",
-      note: `${conversionRate}% ${t("dashboard.conversionRate")}`,
-    },
   ];
 
   return (
@@ -233,7 +224,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map(({ label, value, icon: Icon, iconCls, cardCls, href, note }) => (
           <Link key={label} href={href} className={`glass-card p-4 group hover:scale-[1.01] transition-transform duration-200 block ${cardCls}`}>
             <div className="flex items-start justify-between mb-3">
