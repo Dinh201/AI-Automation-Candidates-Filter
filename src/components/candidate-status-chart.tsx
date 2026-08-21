@@ -21,13 +21,14 @@ const DECISION_META: { key: string; label: string }[] = [
   { key: "REJECT", label: "Reject" },
 ];
 
-// Màu giờ gắn theo VỊ TRÍ (job) chứ không theo trạng thái/quyết định nữa —
-// mỗi cột giờ là 1 stacked bar gộp tất cả vị trí. Tối đa 6 vị trí có màu
-// riêng (theo tổng ứng viên toàn hệ thống, thứ tự cố định không đổi khi đổi
-// metric), các vị trí còn lại gộp vào "Khác" (xám trung tính, không tính là
-// 1 hue categorical). Đã chạy scripts/validate_palette.js (skill dataviz) —
-// PASS lightness/chroma/contrast, CVD ở mức WARN (6–8) được bù bằng legend +
-// tooltip trực tiếp (secondary encoding) cho cả light & dark surface của app.
+// Màu gắn theo VỊ TRÍ (job) — mỗi lớp trong biểu đồ miền xếp chồng là 1 vị
+// trí, chồng lên nhau qua các mốc trạng thái/quyết định. Tối đa 6 vị trí có
+// màu riêng (xếp theo tổng ứng viên toàn hệ thống, thứ tự cố định không đổi
+// khi đổi metric), các vị trí còn lại gộp vào "Khác" (xám trung tính, không
+// tính là 1 hue categorical). Đã chạy scripts/validate_palette.js (skill
+// dataviz) — PASS lightness/chroma/contrast, CVD ở mức WARN (6–8) được bù
+// bằng legend + tooltip trực tiếp (secondary encoding) cho cả light & dark
+// surface của app.
 const MAX_FEATURED_JOBS = 6;
 const JOB_COLOR_SLOTS: { light: string; dark: string }[] = [
   { light: "#2563eb", dark: "#3b82f6" }, // blue
@@ -68,129 +69,176 @@ function useJobColors(byJob: JobChartBucket[], isDark: boolean) {
   }, [byJob, isDark]);
 }
 
-type Segment = { key: string; label: string; count: number; color: string };
+// Làm tròn trục Y lên mốc đẹp (0/20/40...) tương tự Google Sheets, tối đa
+// ~6 vạch chia.
+function niceTicks(max: number, targetCount = 6): { niceMax: number; ticks: number[] } {
+  if (max <= 0) return { niceMax: 1, ticks: [0, 1] };
+  const rawStep = max / targetCount;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const residual = rawStep / magnitude;
+  let step: number;
+  if (residual > 5) step = 10 * magnitude;
+  else if (residual > 2) step = 5 * magnitude;
+  else if (residual > 1) step = 2 * magnitude;
+  else step = magnitude;
+  const niceMax = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let v = 0; v <= niceMax + 1e-9; v += step) ticks.push(Math.round(v));
+  return { niceMax, ticks };
+}
 
-const CHART_HEIGHT = 176; // px — chiều cao vùng cột (bao gồm cả chỗ cho label tổng)
-const LABEL_SPACE = 22; // px — khoảng dành riêng phía trên đỉnh cột cho số liệu
-const BAR_MAX = CHART_HEIGHT - LABEL_SPACE;
-const BAR_WIDTH = 24; // px — theo mark spec (bar/column ≤24px thick)
-const SEGMENT_GAP = 2; // px — surface gap giữa các segment trong 1 stacked bar
+type Layer = { key: string; label: string; color: string; values: number[] };
 
-function StackedBarChart({
+const SVG_W = 640;
+const SVG_H = 260;
+const MARGIN = { top: 12, right: 12, bottom: 26, left: 32 };
+const PLOT_W = SVG_W - MARGIN.left - MARGIN.right;
+const PLOT_H = SVG_H - MARGIN.top - MARGIN.bottom;
+
+function StackedAreaChart({
   categories,
-  segmentsByCategory,
-  overallCounts,
+  layers,
   hoverJob,
   onHoverJob,
-  tooltip,
-  onShowTooltip,
-  onHideTooltip,
 }: {
   categories: { key: string; label: string }[];
-  segmentsByCategory: Record<string, Segment[]>;
-  overallCounts: Record<string, number>;
+  layers: Layer[];
   hoverJob: string | null;
   onHoverJob: (job: string | null) => void;
-  tooltip: string | null;
-  onShowTooltip: (id: string) => void;
-  onHideTooltip: () => void;
 }) {
-  const maxCount = Math.max(...categories.map((c) => overallCounts[c.key] ?? 0), 1);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const n = categories.length;
+
+  const totals = categories.map((_, i) => layers.reduce((sum, l) => sum + l.values[i], 0));
+  const { niceMax, ticks } = niceTicks(Math.max(...totals, 0));
+
+  const xAt = (i: number) => MARGIN.left + (n > 1 ? (i / (n - 1)) * PLOT_W : PLOT_W / 2);
+  const yAt = (v: number) => MARGIN.top + PLOT_H - (v / niceMax) * PLOT_H;
+
+  // Baseline/top tích lũy theo thứ tự lớp cố định (bottom → top).
+  const cumulative = layers.reduce<{ base: number[][]; top: number[][] }>(
+    (acc, layer) => {
+      const prevTop = acc.top.length > 0 ? acc.top[acc.top.length - 1] : categories.map(() => 0);
+      const top = layer.values.map((v, i) => prevTop[i] + v);
+      acc.base.push(prevTop);
+      acc.top.push(top);
+      return acc;
+    },
+    { base: [], top: [] }
+  );
+
+  const gridColor = "var(--ats-border)";
+  const surfaceColor = "var(--ats-surface)";
 
   return (
-    <div className="py-2">
-      <div className="flex items-end justify-center gap-4 sm:gap-6">
-        {categories.map((cat) => {
-          const total = overallCounts[cat.key] ?? 0;
-          const segments = segmentsByCategory[cat.key] ?? [];
-          const stackHeight = total > 0 ? Math.max((total / maxCount) * BAR_MAX, 6) : 0;
+    <div className="relative w-full select-none">
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-auto" style={{ overflow: "visible" }}>
+        {/* Gridlines + nhãn trục Y — hairline, lùi 1 bậc so với surface */}
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={MARGIN.left} x2={SVG_W - MARGIN.right} y1={yAt(t)} y2={yAt(t)} stroke={gridColor} strokeWidth={1} />
+            <text x={MARGIN.left - 8} y={yAt(t)} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="var(--ats-text-muted)">
+              {t}
+            </text>
+          </g>
+        ))}
 
+        {/* Các lớp miền xếp chồng — fill ~65% mờ, viền trên nét liền màu gốc */}
+        {layers.map((layer, li) => {
+          const base = cumulative.base[li];
+          const top = cumulative.top[li];
+          const forward = top.map((v, i) => `${xAt(i)},${yAt(v)}`).join(" L ");
+          const backward = base
+            .map((v, i) => `${xAt(i)},${yAt(v)}`)
+            .reverse()
+            .join(" L ");
+          const path = `M ${forward} L ${backward} Z`;
+          const isDimmed = hoverJob !== null && hoverJob !== layer.key;
           return (
-            <div key={cat.key} className="flex flex-col items-center flex-1 max-w-[84px] min-w-0 cursor-default">
-              <div className="relative w-full" style={{ height: CHART_HEIGHT }}>
-                <span
-                  className="absolute left-1/2 -translate-x-1/2 text-sm font-bold tabular-nums ats-text-h whitespace-nowrap"
-                  style={{ bottom: stackHeight + 6 }}
-                >
-                  {total}
-                </span>
-
-                {total === 0 ? (
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2 bottom-0 rounded-t-md"
-                    style={{ height: 4, width: BAR_WIDTH, background: "var(--ats-surface-2)" }}
-                  />
-                ) : (
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2 bottom-0 flex flex-col-reverse rounded-t-md overflow-hidden"
-                    style={{ width: BAR_WIDTH, height: stackHeight }}
-                  >
-                    {(() => {
-                      // Gap giữa các segment cộng thêm chiều cao ngoài stackHeight —
-                      // trừ trước tổng gap (co giãn khi cột thấp/nhiều segment) để
-                      // tổng chiều cao luôn khớp đúng stackHeight, không tràn/bị cắt.
-                      const rawGapTotal = (segments.length - 1) * SEGMENT_GAP;
-                      const gapTotal = Math.min(rawGapTotal, stackHeight * 0.3);
-                      const gapPerSeg = segments.length > 1 ? gapTotal / (segments.length - 1) : 0;
-                      const usableHeight = stackHeight - gapTotal;
-
-                      return segments.map((seg, i) => {
-                        const segHeight = (seg.count / total) * usableHeight;
-                        const tooltipId = `${cat.key}::${seg.key}`;
-                        const isDimmed = hoverJob !== null && hoverJob !== seg.key;
-                        return (
-                          <div
-                            key={seg.key}
-                            className="relative w-full"
-                            style={{
-                              height: segHeight,
-                              marginTop: i === 0 ? 0 : gapPerSeg,
-                              background: seg.color,
-                              opacity: isDimmed ? 0.35 : 1,
-                              transition: "opacity 150ms",
-                              boxShadow: hoverJob === seg.key ? `0 0 0 1px ${seg.color}` : undefined,
-                            }}
-                            onMouseEnter={() => {
-                              onHoverJob(seg.key);
-                              onShowTooltip(tooltipId);
-                            }}
-                            onMouseLeave={() => {
-                              onHoverJob(null);
-                              onHideTooltip();
-                            }}
-                          >
-                            {tooltip === tooltipId && (
-                              <div
-                                className="absolute z-10 left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
-                                style={{ background: "var(--ats-surface)", border: "1px solid var(--ats-border)" }}
-                              >
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-sm font-bold tabular-nums ats-text-h">{seg.count}</span>
-                                  <span className="text-[11px] ats-text-muted">
-                                    ({((seg.count / total) * 100).toFixed(0)}%)
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: seg.color }} />
-                                  <span className="text-[11px] ats-text-body">{seg.label}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
-              </div>
-
-              <div className="h-8 flex items-start justify-center mt-2">
-                <span className="text-[11px] ats-text-muted text-center leading-tight px-0.5 line-clamp-2">{cat.label}</span>
-              </div>
-            </div>
+            <g key={layer.key} style={{ opacity: isDimmed ? 0.35 : 1, transition: "opacity 150ms" }}>
+              <path d={path} fill={layer.color} fillOpacity={0.62} />
+              <polyline
+                points={top.map((v, i) => `${xAt(i)},${yAt(v)}`).join(" ")}
+                fill="none"
+                stroke={layer.color}
+                strokeWidth={2}
+                strokeLinejoin="round"
+              />
+              {top.map((v, i) =>
+                layer.values[i] > 0 ? (
+                  <circle key={i} cx={xAt(i)} cy={yAt(v)} r={3.5} fill={layer.color} stroke={surfaceColor} strokeWidth={1.5} />
+                ) : null
+              )}
+            </g>
           );
         })}
-      </div>
+
+        {/* Crosshair + hit zones theo từng mốc trục X */}
+        {hoverIndex !== null && (
+          <line
+            x1={xAt(hoverIndex)}
+            x2={xAt(hoverIndex)}
+            y1={MARGIN.top}
+            y2={SVG_H - MARGIN.bottom}
+            stroke="var(--ats-text-muted)"
+            strokeWidth={1}
+            strokeDasharray="3 3"
+          />
+        )}
+        {categories.map((cat, i) => (
+          <rect
+            key={cat.key}
+            x={xAt(i) - PLOT_W / n / 2}
+            y={MARGIN.top}
+            width={PLOT_W / n}
+            height={PLOT_H}
+            fill="transparent"
+            onMouseEnter={() => setHoverIndex(i)}
+            onMouseLeave={() => setHoverIndex(null)}
+          />
+        ))}
+
+        {/* Nhãn trục X */}
+        {categories.map((cat, i) => (
+          <text key={cat.key} x={xAt(i)} y={SVG_H - MARGIN.bottom + 16} textAnchor="middle" fontSize={11} fill="var(--ats-text-muted)">
+            {cat.label}
+          </text>
+        ))}
+      </svg>
+
+      {hoverIndex !== null && (
+        <div
+          className="absolute z-10 px-2.5 py-2 rounded-lg shadow-lg pointer-events-none"
+          style={{
+            background: "var(--ats-surface)",
+            border: "1px solid var(--ats-border)",
+            left: `${(xAt(hoverIndex) / SVG_W) * 100}%`,
+            top: 4,
+            transform: `translateX(${hoverIndex === 0 ? "0%" : hoverIndex === n - 1 ? "-100%" : "-50%"})`,
+            minWidth: 140,
+          }}
+        >
+          <p className="text-[11px] font-semibold ats-text-h mb-1">{categories[hoverIndex].label}</p>
+          <div className="space-y-0.5">
+            {[...layers].reverse().map((layer) => {
+              const v = layer.values[hoverIndex];
+              if (v === 0) return null;
+              return (
+                <div
+                  key={layer.key}
+                  className="flex items-center gap-1.5"
+                  onMouseEnter={() => onHoverJob(layer.key)}
+                  onMouseLeave={() => onHoverJob(null)}
+                >
+                  <span className="w-2 h-0.5 rounded-full shrink-0" style={{ background: layer.color }} />
+                  <span className="text-xs font-bold tabular-nums ats-text-h">{v}</span>
+                  <span className="text-[11px] ats-text-muted truncate">{layer.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -212,7 +260,7 @@ function JobLegend({
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t" style={{ borderColor: "var(--ats-border)" }}>
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mb-3">
       {items.map((it) => {
         const isOther = it.colorKey === OTHER_JOB_KEY;
         const isDimmed = hoverJob !== null && hoverJob !== it.colorKey;
@@ -240,29 +288,25 @@ function JobLegend({
 export function CandidateStatusChart({ data }: { data: CandidateChartData }) {
   const [metric, setMetric] = useState<Metric>("status");
   const [hoverJob, setHoverJob] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<string | null>(null);
   const isDark = useIsDark();
 
   const categories = metric === "status" ? STATUS_META : DECISION_META;
-  const overallCounts = metric === "status" ? data.overall.status : data.overall.decision;
   const { featured, rest, entries, byTitle } = useJobColors(data.byJob, isDark);
   const otherColor = isDark ? OTHER_JOB_COLOR.dark : OTHER_JOB_COLOR.light;
 
-  const segmentsByCategory = useMemo(() => {
-    const result: Record<string, Segment[]> = {};
-    for (const cat of categories) {
-      const segs: Segment[] = [];
-      for (const job of featured) {
-        const count = (metric === "status" ? job.status : job.decision)[cat.key] ?? 0;
-        if (count > 0) {
-          segs.push({ key: job.jobTitle, label: job.jobTitle, count, color: byTitle.get(job.jobTitle)!.color });
-        }
+  const layers = useMemo(() => {
+    const result: Layer[] = [];
+    for (const job of featured) {
+      const values = categories.map((cat) => (metric === "status" ? job.status : job.decision)[cat.key] ?? 0);
+      if (values.some((v) => v > 0)) {
+        result.push({ key: job.jobTitle, label: job.jobTitle, color: byTitle.get(job.jobTitle)!.color, values });
       }
-      const otherCount = rest.reduce((sum, job) => sum + ((metric === "status" ? job.status : job.decision)[cat.key] ?? 0), 0);
-      if (otherCount > 0) {
-        segs.push({ key: OTHER_JOB_KEY, label: "Khác", count: otherCount, color: otherColor });
-      }
-      result[cat.key] = segs;
+    }
+    const otherValues = categories.map((cat) =>
+      rest.reduce((sum, job) => sum + ((metric === "status" ? job.status : job.decision)[cat.key] ?? 0), 0)
+    );
+    if (otherValues.some((v) => v > 0)) {
+      result.push({ key: OTHER_JOB_KEY, label: "Khác", color: otherColor, values: otherValues });
     }
     return result;
   }, [categories, featured, rest, byTitle, metric, otherColor]);
@@ -271,7 +315,7 @@ export function CandidateStatusChart({ data }: { data: CandidateChartData }) {
 
   return (
     <div className="glass-card p-5">
-      <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <BarChart2 className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           <h2 className="text-base font-bold tracking-tight ats-accent-text">Thống kê ứng viên theo vị trí</h2>
@@ -298,17 +342,8 @@ export function CandidateStatusChart({ data }: { data: CandidateChartData }) {
         <p className="text-sm text-center py-8 ats-text-muted">Chưa có dữ liệu ứng viên.</p>
       ) : (
         <>
-          <StackedBarChart
-            categories={categories}
-            segmentsByCategory={segmentsByCategory}
-            overallCounts={overallCounts}
-            hoverJob={hoverJob}
-            onHoverJob={setHoverJob}
-            tooltip={tooltip}
-            onShowTooltip={setTooltip}
-            onHideTooltip={() => setTooltip(null)}
-          />
           <JobLegend entries={entries} otherTotal={otherTotal} hoverJob={hoverJob} onHoverJob={setHoverJob} />
+          <StackedAreaChart categories={categories} layers={layers} hoverJob={hoverJob} onHoverJob={setHoverJob} />
         </>
       )}
     </div>
