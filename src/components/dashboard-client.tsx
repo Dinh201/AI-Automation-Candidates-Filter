@@ -8,7 +8,7 @@ import {
 import { useTranslation } from "@/lib/i18n-context";
 import { CandidateScoringResult } from "@/services/ai/schema";
 import { CandidateStatusChart } from "@/components/candidate-status-chart";
-import type { CandidateChartData } from "@/app/page";
+import type { ChartCandidateRow } from "@/lib/chart-data";
 
 type AuditLog = {
   id: string;
@@ -51,7 +51,7 @@ type DashboardData = {
   auditLogs: AuditLog[];
   todayInterviews: TodayInterview[];
   trendDays: { dateIso: string; count: number }[];
-  chartData: CandidateChartData;
+  chartRows: ChartCandidateRow[];
 };
 
 function TrendChart({ days, todayLabel, otherDaysLabel, locale }: {
@@ -117,7 +117,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
   const {
     openJobsCount, totalCandidates, scoredCount,
     weekInterviewsCount, recentCandidates,
-    auditLogs, todayInterviews, trendDays, chartData,
+    auditLogs, todayInterviews, trendDays, chartRows,
   } = data;
 
   function decisionConfig(decision: string | undefined) {
@@ -313,7 +313,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
       </div>
 
       {/* ── Candidate status chart (overall + per position) ── */}
-      <CandidateStatusChart data={chartData} />
+      <CandidateStatusChart rows={chartRows} />
 
       {/* ── Recent candidates table ── */}
       <div className="glass-card overflow-hidden">

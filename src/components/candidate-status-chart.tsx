@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BarChart2 } from "lucide-react";
-import type { CandidateChartData, JobChartBucket } from "@/app/page";
+import { buildChartData, type ChartCandidateRow, type JobChartBucket } from "@/lib/chart-data";
 
 type Metric = "status" | "decision";
+const ALL_TIME = "all";
 
 const STATUS_META: { key: string; label: string }[] = [
   { key: "New", label: "Mới" },
@@ -23,12 +24,12 @@ const DECISION_META: { key: string; label: string }[] = [
 
 // Màu gắn theo VỊ TRÍ (job) — mỗi lớp trong biểu đồ miền xếp chồng là 1 vị
 // trí, chồng lên nhau qua các mốc trạng thái/quyết định. Tối đa 6 vị trí có
-// màu riêng (xếp theo tổng ứng viên toàn hệ thống, thứ tự cố định không đổi
-// khi đổi metric), các vị trí còn lại gộp vào "Khác" (xám trung tính, không
-// tính là 1 hue categorical). Đã chạy scripts/validate_palette.js (skill
-// dataviz) — PASS lightness/chroma/contrast, CVD ở mức WARN (6–8) được bù
-// bằng legend + tooltip trực tiếp (secondary encoding) cho cả light & dark
-// surface của app.
+// màu riêng (xếp theo tổng ứng viên TOÀN THỜI GIAN — không đổi khi lọc theo
+// tháng hay đổi metric, tránh "recolor-on-filter"), các vị trí còn lại gộp
+// vào "Khác" (xám trung tính, không tính là 1 hue categorical). Đã chạy
+// scripts/validate_palette.js (skill dataviz) — PASS lightness/chroma/
+// contrast, CVD ở mức WARN (6–8) được bù bằng legend + tooltip trực tiếp
+// (secondary encoding) cho cả light & dark surface của app.
 const MAX_FEATURED_JOBS = 6;
 const JOB_COLOR_SLOTS: { light: string; dark: string }[] = [
   { light: "#2563eb", dark: "#3b82f6" }, // blue
@@ -53,20 +54,28 @@ function useIsDark() {
   return isDark;
 }
 
-type JobColorEntry = { jobTitle: string; colorKey: string; color: string };
+type JobColor = { jobTitle: string; color: string };
 
 function useJobColors(byJob: JobChartBucket[], isDark: boolean) {
   return useMemo(() => {
     const featured = byJob.slice(0, MAX_FEATURED_JOBS);
-    const rest = byJob.slice(MAX_FEATURED_JOBS);
-    const entries: JobColorEntry[] = featured.map((j, i) => ({
+    const featuredTitles = new Set(featured.map((j) => j.jobTitle));
+    const colors: JobColor[] = featured.map((j, i) => ({
       jobTitle: j.jobTitle,
-      colorKey: j.jobTitle,
       color: isDark ? JOB_COLOR_SLOTS[i].dark : JOB_COLOR_SLOTS[i].light,
     }));
-    const byTitle = new Map(entries.map((e) => [e.jobTitle, e]));
-    return { featured, rest, entries, byTitle };
+    const byTitle = new Map(colors.map((c) => [c.jobTitle, c.color]));
+    return { featuredTitles, byTitle };
   }, [byJob, isDark]);
+}
+
+function monthKey(iso: string): string {
+  return iso.slice(0, 7); // "YYYY-MM"
+}
+
+function formatMonthLabel(ym: string): string {
+  const [y, m] = ym.split("-");
+  return `Tháng ${parseInt(m, 10)}/${y}`;
 }
 
 // Làm tròn trục Y lên mốc đẹp (0/20/40...) tương tự Google Sheets, tối đa
@@ -281,40 +290,29 @@ function StackedAreaChart({
 }
 
 function JobLegend({
-  entries,
-  otherTotal,
+  layers,
   hoverJob,
   onHoverJob,
 }: {
-  entries: JobColorEntry[];
-  otherTotal: number;
+  layers: Layer[];
   hoverJob: string | null;
   onHoverJob: (job: string | null) => void;
 }) {
-  const items = [
-    ...entries,
-    ...(otherTotal > 0 ? [{ jobTitle: "Khác", colorKey: OTHER_JOB_KEY, color: "" }] : []),
-  ];
-
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mb-3">
-      {items.map((it) => {
-        const isOther = it.colorKey === OTHER_JOB_KEY;
-        const isDimmed = hoverJob !== null && hoverJob !== it.colorKey;
+      {layers.map((layer) => {
+        const isDimmed = hoverJob !== null && hoverJob !== layer.key;
         return (
           <div
-            key={it.colorKey}
-            onMouseEnter={() => onHoverJob(it.colorKey)}
+            key={layer.key}
+            onMouseEnter={() => onHoverJob(layer.key)}
             onMouseLeave={() => onHoverJob(null)}
             className="flex items-center gap-1.5 max-w-[220px] cursor-default transition-opacity"
             style={{ opacity: isDimmed ? 0.45 : 1 }}
-            title={it.jobTitle}
+            title={layer.label}
           >
-            <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ background: isOther ? "var(--ats-text-muted)" : it.color }}
-            />
-            <span className="text-[11px] ats-text-body truncate">{it.jobTitle}</span>
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: layer.color }} />
+            <span className="text-[11px] ats-text-body truncate">{layer.label}</span>
           </div>
         );
       })}
@@ -322,33 +320,57 @@ function JobLegend({
   );
 }
 
-export function CandidateStatusChart({ data }: { data: CandidateChartData }) {
+export function CandidateStatusChart({ rows }: { rows: ChartCandidateRow[] }) {
   const [metric, setMetric] = useState<Metric>("status");
+  const [monthFilter, setMonthFilter] = useState<string>(ALL_TIME);
   const [hoverJob, setHoverJob] = useState<string | null>(null);
   const isDark = useIsDark();
 
   const categories = metric === "status" ? STATUS_META : DECISION_META;
-  const { featured, rest, entries, byTitle } = useJobColors(data.byJob, isDark);
+
+  const monthOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      if (r.created_at) set.add(monthKey(r.created_at));
+    }
+    return Array.from(set).sort().reverse();
+  }, [rows]);
+
+  // Xếp hạng/màu vị trí luôn tính trên TOÀN BỘ dữ liệu (không lọc theo
+  // tháng) để giữ màu ổn định — đổi tháng không được đổi màu 1 vị trí đã
+  // "học" (xem anti-pattern "recolor-on-filter" trong skill dataviz).
+  const allTimeData = useMemo(() => buildChartData(rows), [rows]);
+  const { featuredTitles, byTitle } = useJobColors(allTimeData.byJob, isDark);
   const otherColor = isDark ? OTHER_JOB_COLOR.dark : OTHER_JOB_COLOR.light;
 
+  const filteredRows = useMemo(
+    () => (monthFilter === ALL_TIME ? rows : rows.filter((r) => monthKey(r.created_at) === monthFilter)),
+    [rows, monthFilter]
+  );
+  const data = useMemo(() => buildChartData(filteredRows), [filteredRows]);
+
   const layers = useMemo(() => {
+    const filteredByTitle = new Map(data.byJob.map((j) => [j.jobTitle, j]));
     const result: Layer[] = [];
-    for (const job of featured) {
-      const values = categories.map((cat) => (metric === "status" ? job.status : job.decision)[cat.key] ?? 0);
+
+    for (const jobTitle of featuredTitles) {
+      const job = filteredByTitle.get(jobTitle);
+      const values = categories.map((cat) => (job ? ((metric === "status" ? job.status : job.decision)[cat.key] ?? 0) : 0));
       if (values.some((v) => v > 0)) {
-        result.push({ key: job.jobTitle, label: job.jobTitle, color: byTitle.get(job.jobTitle)!.color, values });
+        result.push({ key: jobTitle, label: jobTitle, color: byTitle.get(jobTitle)!, values });
       }
     }
+
     const otherValues = categories.map((cat) =>
-      rest.reduce((sum, job) => sum + ((metric === "status" ? job.status : job.decision)[cat.key] ?? 0), 0)
+      data.byJob
+        .filter((j) => !featuredTitles.has(j.jobTitle))
+        .reduce((sum, j) => sum + ((metric === "status" ? j.status : j.decision)[cat.key] ?? 0), 0)
     );
     if (otherValues.some((v) => v > 0)) {
       result.push({ key: OTHER_JOB_KEY, label: "Khác", color: otherColor, values: otherValues });
     }
     return result;
-  }, [categories, featured, rest, byTitle, metric, otherColor]);
-
-  const otherTotal = rest.reduce((sum, j) => sum + j.total, 0);
+  }, [categories, data.byJob, featuredTitles, byTitle, metric, otherColor]);
 
   return (
     <div className="glass-card p-5">
@@ -357,29 +379,44 @@ export function CandidateStatusChart({ data }: { data: CandidateChartData }) {
           <BarChart2 className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           <h2 className="text-base font-bold tracking-tight ats-accent-text">Thống kê ứng viên theo vị trí</h2>
         </div>
-        <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: "var(--ats-surface-2)" }}>
-          {(["status", "decision"] as Metric[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMetric(m)}
-              className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
-              style={
-                metric === m
-                  ? { background: "var(--ats-surface)", color: "var(--ats-accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }
-                  : { color: "var(--ats-text-muted)" }
-              }
-            >
-              {m === "status" ? "Theo trạng thái" : "Theo quyết định AI"}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            className="text-xs font-medium rounded-lg px-2.5 py-1.5 focus:outline-none"
+            style={{ background: "var(--ats-surface-2)", color: "var(--ats-text-h)", border: "1px solid var(--ats-border)" }}
+          >
+            <option value={ALL_TIME}>Tất cả thời gian</option>
+            {monthOptions.map((ym) => (
+              <option key={ym} value={ym}>{formatMonthLabel(ym)}</option>
+            ))}
+          </select>
+          <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: "var(--ats-surface-2)" }}>
+            {(["status", "decision"] as Metric[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMetric(m)}
+                className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
+                style={
+                  metric === m
+                    ? { background: "var(--ats-surface)", color: "var(--ats-accent-text)", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }
+                    : { color: "var(--ats-text-muted)" }
+                }
+              >
+                {m === "status" ? "Theo trạng thái" : "Theo quyết định AI"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {data.overall.total === 0 ? (
-        <p className="text-sm text-center py-8 ats-text-muted">Chưa có dữ liệu ứng viên.</p>
+        <p className="text-sm text-center py-8 ats-text-muted">
+          {monthFilter === ALL_TIME ? "Chưa có dữ liệu ứng viên." : "Không có ứng viên nào trong tháng này."}
+        </p>
       ) : (
         <>
-          <JobLegend entries={entries} otherTotal={otherTotal} hoverJob={hoverJob} onHoverJob={setHoverJob} />
+          <JobLegend layers={layers} hoverJob={hoverJob} onHoverJob={setHoverJob} />
           <StackedAreaChart categories={categories} layers={layers} hoverJob={hoverJob} onHoverJob={setHoverJob} isDark={isDark} />
         </>
       )}
