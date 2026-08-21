@@ -33,7 +33,7 @@ const MAX_FEATURED_JOBS = 6;
 const JOB_COLOR_SLOTS: { light: string; dark: string }[] = [
   { light: "#2563eb", dark: "#3b82f6" }, // blue
   { light: "#ea580c", dark: "#ea580c" }, // orange
-  { light: "#0d9488", dark: "#0d9488" }, // teal
+  { light: "#0891b2", dark: "#0891b2" }, // cyan — tách biệt rõ với slot xanh lá bên dưới
   { light: "#ca8a04", dark: "#a16207" }, // yellow
   { light: "#db2777", dark: "#ec4899" }, // pink
   { light: "#16a34a", dark: "#16a34a" }, // green
@@ -88,10 +88,36 @@ function niceTicks(max: number, targetCount = 6): { niceMax: number; ticks: numb
 }
 
 type Layer = { key: string; label: string; color: string; values: number[] };
+type Point = { x: number; y: number };
+
+// Cardinal spline (Catmull-Rom, tension mặc định) — chuyển 1 dãy điểm thành
+// các đoạn cubic Bézier để đường/miền uốn mượt qua từng mốc thay vì gãy khúc
+// nhọn như polyline thẳng.
+function smoothSegments(pts: Point[]): string[] {
+  if (pts.length < 2) return [];
+  const segs: string[] = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i === 0 ? i : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    segs.push(`C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`);
+  }
+  return segs;
+}
+
+function smoothPath(pts: Point[]): string {
+  if (pts.length === 0) return "";
+  return `M ${pts[0].x},${pts[0].y} ${smoothSegments(pts).join(" ")}`;
+}
 
 const SVG_W = 640;
-const SVG_H = 260;
-const MARGIN = { top: 12, right: 12, bottom: 26, left: 32 };
+const SVG_H = 280;
+const MARGIN = { top: 22, right: 12, bottom: 30, left: 32 };
 const PLOT_W = SVG_W - MARGIN.left - MARGIN.right;
 const PLOT_H = SVG_H - MARGIN.top - MARGIN.bottom;
 
@@ -100,11 +126,13 @@ function StackedAreaChart({
   layers,
   hoverJob,
   onHoverJob,
+  isDark,
 }: {
   categories: { key: string; label: string }[];
   layers: Layer[];
   hoverJob: string | null;
   onHoverJob: (job: string | null) => void;
+  isDark: boolean;
 }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const n = categories.length;
@@ -127,13 +155,24 @@ function StackedAreaChart({
     { base: [], top: [] }
   );
 
-  const gridColor = "var(--ats-border)";
+  // Gridline nhẹ, lùi hẳn so với border card (border card đậm hơn vì dùng cho
+  // viền cấu trúc, không hợp làm gridline nền — mark spec cần hairline recessive).
+  const gridColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.07)";
   const surfaceColor = "var(--ats-surface)";
 
   return (
     <div className="relative w-full select-none">
       <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-auto" style={{ overflow: "visible" }}>
-        {/* Gridlines + nhãn trục Y — hairline, lùi 1 bậc so với surface */}
+        <defs>
+          {layers.map((layer, li) => (
+            <linearGradient key={li} id={`csc-grad-${li}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={layer.color} stopOpacity={0.75} />
+              <stop offset="100%" stopColor={layer.color} stopOpacity={0.4} />
+            </linearGradient>
+          ))}
+        </defs>
+
+        {/* Gridlines + nhãn trục Y — hairline, lùi hẳn so với surface */}
         {ticks.map((t) => (
           <g key={t}>
             <line x1={MARGIN.left} x2={SVG_W - MARGIN.right} y1={yAt(t)} y2={yAt(t)} stroke={gridColor} strokeWidth={1} />
@@ -143,31 +182,29 @@ function StackedAreaChart({
           </g>
         ))}
 
-        {/* Các lớp miền xếp chồng — fill ~65% mờ, viền trên nét liền màu gốc */}
+        {/* Các lớp miền xếp chồng — đường cong mượt (Catmull-Rom), gradient nhạt
+            dần xuống đáy, viền trên nét liền màu gốc */}
         {layers.map((layer, li) => {
           const base = cumulative.base[li];
           const top = cumulative.top[li];
-          const forward = top.map((v, i) => `${xAt(i)},${yAt(v)}`).join(" L ");
-          const backward = base
-            .map((v, i) => `${xAt(i)},${yAt(v)}`)
-            .reverse()
-            .join(" L ");
-          const path = `M ${forward} L ${backward} Z`;
+          const topPts = top.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
+          const basePts = base.map((v, i) => ({ x: xAt(i), y: yAt(v) })).reverse();
+          const topCurve = smoothPath(topPts);
+          const baseCurve = `L ${basePts[0].x},${basePts[0].y} ${smoothSegments(basePts).join(" ")}`;
           const isDimmed = hoverJob !== null && hoverJob !== layer.key;
           return (
-            <g key={layer.key} style={{ opacity: isDimmed ? 0.35 : 1, transition: "opacity 150ms" }}>
-              <path d={path} fill={layer.color} fillOpacity={0.62} />
-              <polyline
-                points={top.map((v, i) => `${xAt(i)},${yAt(v)}`).join(" ")}
-                fill="none"
-                stroke={layer.color}
-                strokeWidth={2}
-                strokeLinejoin="round"
-              />
-              {top.map((v, i) =>
-                layer.values[i] > 0 ? (
-                  <circle key={i} cx={xAt(i)} cy={yAt(v)} r={3.5} fill={layer.color} stroke={surfaceColor} strokeWidth={1.5} />
-                ) : null
+            <g key={layer.key} style={{ opacity: isDimmed ? 0.3 : 1, transition: "opacity 150ms" }}>
+              <path d={`${topCurve} ${baseCurve} Z`} fill={`url(#csc-grad-${li})`} />
+              <path d={topCurve} fill="none" stroke={layer.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              {hoverIndex !== null && layer.values[hoverIndex] > 0 && (
+                <circle
+                  cx={xAt(hoverIndex)}
+                  cy={yAt(top[hoverIndex])}
+                  r={4}
+                  fill={layer.color}
+                  stroke={surfaceColor}
+                  strokeWidth={1.5}
+                />
               )}
             </g>
           );
@@ -200,7 +237,7 @@ function StackedAreaChart({
 
         {/* Nhãn trục X */}
         {categories.map((cat, i) => (
-          <text key={cat.key} x={xAt(i)} y={SVG_H - MARGIN.bottom + 16} textAnchor="middle" fontSize={11} fill="var(--ats-text-muted)">
+          <text key={cat.key} x={xAt(i)} y={SVG_H - MARGIN.bottom + 18} textAnchor="middle" fontSize={11} fill="var(--ats-text-muted)">
             {cat.label}
           </text>
         ))}
@@ -343,7 +380,7 @@ export function CandidateStatusChart({ data }: { data: CandidateChartData }) {
       ) : (
         <>
           <JobLegend entries={entries} otherTotal={otherTotal} hoverJob={hoverJob} onHoverJob={setHoverJob} />
-          <StackedAreaChart categories={categories} layers={layers} hoverJob={hoverJob} onHoverJob={setHoverJob} />
+          <StackedAreaChart categories={categories} layers={layers} hoverJob={hoverJob} onHoverJob={setHoverJob} isDark={isDark} />
         </>
       )}
     </div>
