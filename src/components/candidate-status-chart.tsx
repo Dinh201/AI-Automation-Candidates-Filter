@@ -9,7 +9,6 @@ const ALL_TIME = "all";
 const ALL_CATEGORIES = "all";
 
 const STATUS_META: { key: string; label: string }[] = [
-  { key: "New", label: "Mới" },
   { key: "Scored", label: "Đã chấm điểm" },
   { key: "Interviewing", label: "Đang phỏng vấn" },
   { key: "Hired", label: "Đã tuyển" },
