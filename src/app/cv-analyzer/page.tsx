@@ -22,8 +22,8 @@ type Phase = "upload" | "analyzing" | "result";
 // File PDF được upload thẳng từ trình duyệt lên Supabase Storage (qua signed
 // upload URL, xem handleAnalyze) thay vì gửi qua serverless function — Vercel
 // giới hạn cứng 4.5MB/request cho function nên không thể gửi file lớn qua đó.
-// 10MB khớp với fileSizeLimit của bucket cv_uploads.
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+// 50MB khớp với fileSizeLimit của bucket cv_uploads.
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 const DECISION_CONFIG = {
   "STRONG HIRE": { labelKey: "cvAnalyzer.decision.strongHire", bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30" },

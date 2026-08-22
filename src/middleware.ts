@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/jobs/") && pathname.endsWith("/apply");
   const isPublicApi =
     pathname.startsWith("/api/email/") ||
-    pathname === "/api/candidates/apply" ||
+    pathname.startsWith("/api/candidates/apply") ||
     pathname.startsWith("/api/calendar/callback");
 
   if (isPublicApply || isPublicApi) {

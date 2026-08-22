@@ -3,11 +3,11 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const BUCKET = "cv_uploads";
 
-// Cấp URL để client upload thẳng lên Supabase Storage, không qua serverless
-// function — Vercel giới hạn cứng 4.5MB cho body của mỗi function, trong khi
-// bucket cv_uploads cho phép tới 50MB (xem fileSizeLimit ở ensureBucket()).
-// Bước chấm điểm AI ở /api/cv-analyze chỉ nhận JSON nhỏ (đường dẫn file) sau
-// khi client đã upload xong.
+// Cấp URL để ứng viên (không đăng nhập) upload CV thẳng lên Supabase Storage
+// thay vì gửi qua serverless function /api/candidates/apply — Vercel giới
+// hạn cứng 4.5MB/request cho function, trong khi bucket cv_uploads cho phép
+// tới 50MB. /api/candidates/apply chỉ nhận JSON nhỏ (đường dẫn file) sau khi
+// client đã upload xong. Route công khai — xem middleware.ts.
 async function ensureBucket() {
   const { data: buckets } = await supabaseAdmin.storage.listBuckets();
   if (!buckets?.some((b) => b.name === BUCKET)) {
@@ -36,6 +36,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const { data: job } = await supabaseAdmin.from("jobs").select("id").eq("id", jobId).single();
+    if (!job) {
+      return NextResponse.json(
+        { error: "Không tìm thấy vị trí tuyển dụng", code: "NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
     await ensureBucket();
 
     const path = `${jobId}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
@@ -53,7 +61,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ path: data.path, token: data.token });
   } catch (error: unknown) {
-    console.error("Lỗi cv-analyze/upload-url:", error);
+    console.error("Lỗi candidates/apply/upload-url:", error);
     return NextResponse.json(
       { error: "Có lỗi xảy ra. Vui lòng thử lại.", code: "UNKNOWN_ERROR" },
       { status: 500 }

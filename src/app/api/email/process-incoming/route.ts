@@ -86,7 +86,7 @@ async function ensureBucket() {
   if (!exists) {
     await supabaseAdmin.storage.createBucket(BUCKET, {
       public: false,
-      fileSizeLimit: 10 * 1024 * 1024,
+      fileSizeLimit: 50 * 1024 * 1024,
     });
   }
 }

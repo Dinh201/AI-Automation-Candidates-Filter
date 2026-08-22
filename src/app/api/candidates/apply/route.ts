@@ -11,65 +11,54 @@ export const maxDuration = 120;
 
 const BUCKET = "cv_uploads";
 
-async function ensureBucket() {
-  const { data: buckets } = await supabaseAdmin.storage.listBuckets();
-  const exists = buckets?.some((b) => b.name === BUCKET);
-  if (!exists) {
-    await supabaseAdmin.storage.createBucket(BUCKET, {
-      public: false,
-      fileSizeLimit: 10 * 1024 * 1024, // 10MB
-    });
-  }
-}
-
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const phone = formData.get("phone") as string;
-    const jobId = formData.get("job_id") as string;
-    const formAnswers = formData.get("form_answers") as string;
-    const file = formData.get("cv") as File;
+    const body = await request.json();
+    const name = (body.name as string) || "";
+    const email = (body.email as string) || "";
+    const phone = (body.phone as string) || "";
+    const jobId = (body.job_id as string) || "";
+    const formAnswers = (body.form_answers as string) || "";
+    const cvPath = (body.cv_path as string) || "";
 
-    if (!name || !email || !jobId || !file) {
+    if (!name || !email || !jobId || !cvPath) {
       return NextResponse.json(
         { error: "Thiếu thông tin bắt buộc: tên, email, job_id hoặc CV", code: "VALIDATION_ERROR" },
         { status: 400 }
       );
     }
 
-    if (file.type !== "application/pdf") {
+    // cv_path phải nằm trong thư mục của đúng job — tránh client gửi lên
+    // đường dẫn tùy ý trỏ tới file đã upload cho job khác.
+    if (!cvPath.startsWith(`${jobId}/`)) {
       return NextResponse.json(
-        { error: "Chỉ chấp nhận file PDF", code: "VALIDATION_ERROR" },
+        { error: "Đường dẫn CV không hợp lệ", code: "VALIDATION_ERROR" },
         { status: 400 }
       );
     }
 
-    // Đảm bảo bucket tồn tại
-    await ensureBucket();
-
-    // 1. Upload CV lên Supabase Storage
-    const fileBuffer = await file.arrayBuffer();
-    const fileName = `${jobId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-
-    const { error: storageError } = await supabaseAdmin.storage
+    // File PDF đã được client upload thẳng lên Storage qua signed upload URL
+    // (/api/candidates/apply/upload-url) — tải lại nội dung ở đây để trích
+    // xuất text và tạo signed URL xem CV.
+    const { data: downloaded, error: downloadError } = await supabaseAdmin.storage
       .from(BUCKET)
-      .upload(fileName, fileBuffer, { contentType: "application/pdf" });
+      .download(cvPath);
 
-    if (storageError) {
-      console.error("Lỗi upload CV:", storageError);
+    if (downloadError || !downloaded) {
+      console.error("Lỗi tải file CV đã upload:", downloadError);
       return NextResponse.json(
-        { error: "Không thể upload CV. Vui lòng thử lại.", code: "CV_UPLOAD_FAILED" },
-        { status: 500 }
+        { error: "Không tìm thấy file CV đã upload. Vui lòng thử lại.", code: "CV_UPLOAD_FAILED" },
+        { status: 400 }
       );
     }
+
+    const fileBuffer = await downloaded.arrayBuffer();
 
     // Lấy signed URL (60 ngày) vì bucket là private
     const { data: signedUrlData } = await supabaseAdmin.storage
       .from(BUCKET)
-      .createSignedUrl(fileName, 60 * 24 * 60 * 60);
-    const cvUrl = signedUrlData?.signedUrl ?? fileName;
+      .createSignedUrl(cvPath, 60 * 24 * 60 * 60);
+    const cvUrl = signedUrlData?.signedUrl ?? cvPath;
 
     // 2. Tạo record Candidate với trạng thái "New"
     const { data: candidate, error: candidateError } = await supabaseAdmin

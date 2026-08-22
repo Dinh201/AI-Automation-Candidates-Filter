@@ -2,6 +2,7 @@
 
 import { useState, useRef, use, useEffect } from "react";
 import Image from "next/image";
+import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import {
   UploadCloud,
@@ -26,6 +27,12 @@ type Job = {
   experience_requirement: string;
   benefits: string;
 };
+
+// CV được upload thẳng từ trình duyệt lên Supabase Storage (qua signed
+// upload URL, xem handleSubmit) thay vì gửi qua serverless function — Vercel
+// giới hạn cứng 4.5MB/request cho function. 50MB khớp với fileSizeLimit của
+// bucket cv_uploads.
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 function parseTitle(rawTitle: string) {
   const match = rawTitle.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
@@ -147,16 +154,23 @@ export default function CandidateApplyPage({ params }: { params: Promise<{ id: s
     setIsDragging(false);
   };
 
+  const acceptFile = (picked: File) => {
+    if (picked.type !== "application/pdf") {
+      alert("Vui lòng chỉ upload file PDF");
+      return;
+    }
+    if (picked.size > MAX_FILE_SIZE_BYTES) {
+      alert("File CV quá lớn (tối đa 50MB). Vui lòng nén hoặc xuất lại file PDF nhỏ hơn.");
+      return;
+    }
+    setFile(picked);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const droppedFile = e.dataTransfer.files[0];
-      if (droppedFile.type === "application/pdf") {
-        setFile(droppedFile);
-      } else {
-        alert("Vui lòng chỉ upload file PDF");
-      }
+      acceptFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -172,13 +186,37 @@ export default function CandidateApplyPage({ params }: { params: Promise<{ id: s
     setErrorMessage("");
 
     try {
-      const formData = new FormData(e.currentTarget);
-      formData.append("job_id", jobId);
-      formData.append("cv", file);
+      // Bước 1: xin signed upload URL rồi upload CV thẳng lên Supabase
+      // Storage — không đi qua serverless function nên không bị giới hạn
+      // 4.5MB/request của Vercel.
+      const urlRes = await fetch("/api/candidates/apply/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: jobId, file_name: file.name }),
+      });
+      const urlData = await urlRes.json();
+      if (!urlRes.ok) throw new Error(urlData.error || "Có lỗi xảy ra khi tải CV lên");
 
+      const supabase = createSupabaseBrowser();
+      const { error: uploadError } = await supabase.storage
+        .from("cv_uploads")
+        .uploadToSignedUrl(urlData.path, urlData.token, file, { contentType: "application/pdf" });
+      if (uploadError) throw new Error(uploadError.message || "Có lỗi xảy ra khi tải CV lên");
+
+      // Bước 2: gửi thông tin ứng viên — chỉ JSON nhỏ (đường dẫn file), file
+      // đã nằm sẵn trên Storage nên server tự đọc lại từ đó.
+      const formData = new FormData(e.currentTarget);
       const res = await fetch("/api/candidates/apply", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_id: jobId,
+          cv_path: urlData.path,
+          name: formData.get("name"),
+          email: formData.get("email"),
+          phone: formData.get("phone"),
+          form_answers: formData.get("form_answers"),
+        }),
       });
 
       const data = await res.json();
@@ -449,7 +487,7 @@ export default function CandidateApplyPage({ params }: { params: Promise<{ id: s
                           <span className="font-semibold text-[#0D9488]">Tải file lên</span> hoặc kéo
                           thả vào đây
                         </div>
-                        <p className="text-xs text-[#94A3B8]">Chỉ chấp nhận PDF, tối đa 10MB</p>
+                        <p className="text-xs text-[#94A3B8]">Chỉ chấp nhận PDF, tối đa 50MB</p>
                       </div>
                     )}
                   </div>
@@ -460,7 +498,7 @@ export default function CandidateApplyPage({ params }: { params: Promise<{ id: s
                     accept="application/pdf"
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
-                        setFile(e.target.files[0]);
+                        acceptFile(e.target.files[0]);
                       }
                     }}
                   />
