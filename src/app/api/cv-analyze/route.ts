@@ -113,15 +113,28 @@ export async function POST(request: Request) {
       }
     }
 
-    let result = await scoreCandidate({
-      jobDescription: job.description,
-      requiredSkills: job.required_skills,
-      preferredSkills: job.preferred_skills || "",
-      experienceRequirement: job.experience_requirement || "",
-      customRubric: JSON.stringify(job.rubric || {}),
-      formAnswers: "",
-      cvText,
-    });
+    let result;
+    try {
+      result = await scoreCandidate({
+        jobDescription: job.description,
+        requiredSkills: job.required_skills,
+        preferredSkills: job.preferred_skills || "",
+        experienceRequirement: job.experience_requirement || "",
+        customRubric: JSON.stringify(job.rubric || {}),
+        formAnswers: "",
+        cvText,
+      });
+    } catch (scoringError: unknown) {
+      // Không để candidate kẹt vĩnh viễn ở status "Scoring" nếu AI chấm điểm
+      // lỗi/timeout — đưa về "New" để HR biết mà review/chấm lại thủ công
+      // (giống cách xử lý ở candidates/apply và email/process-incoming).
+      await supabaseAdmin.from("candidates").update({ status: "New" }).eq("id", candidate.id);
+      console.error("Lỗi AI scoring:", scoringError);
+      return NextResponse.json(
+        { error: "Chấm điểm CV thất bại. Ứng viên đã được lưu ở trạng thái Mới, vui lòng thử chấm lại.", code: "AI_SCORING_FAILED" },
+        { status: 500 }
+      );
+    }
 
     // Tính total_score server-side để tránh AI trả về 0
     const totalScore = parseFloat(
